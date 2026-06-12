@@ -1,0 +1,669 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useRef, useEffect } from 'react';
+     4→     4→import { motion } from 'framer-motion';
+     5→     5→import {
+     6→     6→  MessageSquare,
+     7→     7→  Globe,
+     8→     8→  Sparkles,
+     9→     9→  Send,
+    10→    10→  Bot,
+    11→    11→  User,
+    12→    12→  Code,
+    13→    13→  Eye,
+    14→    14→  Copy,
+    15→    15→  Check,
+    16→    16→  Loader2,
+    17→    17→  Zap,
+    18→    18→  Brain,
+    19→    19→  Palette,
+    20→    20→  ChevronRight,
+    21→    21→  Menu,
+    22→    22→  X,
+    23→    23→  Moon,
+    24→    24→  Sun,
+    25→    25→  Trash2,
+    26→    26→  RotateCcw,
+    27→    27→  Download,
+    28→    28→} from 'lucide-react';
+    29→    29→import { Button } from '@/components/ui/button';
+    30→    30→import { Textarea } from '@/components/ui/textarea';
+    31→    31→import { Input } from '@/components/ui/input';
+    32→    32→import { ScrollArea } from '@/components/ui/scroll-area';
+    33→    33→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    34→    34→import ReactMarkdown from 'react-markdown';
+    35→    35→
+    36→    36→// Types
+    37→    37→interface Message {
+    38→    38→  id: string;
+    39→    39→  role: 'user' | 'assistant';
+    40→    40→  content: string;
+    41→    41→  timestamp: Date;
+    42→    42→}
+    43→    43→
+    44→    44→interface ChatConversation {
+    45→    45→  id: string;
+    46→    46→  title: string;
+    47→    47→  messages: Message[];
+    48→    48→  createdAt: Date;
+    49→    49→}
+    50→    50→
+    51→    51→type ActiveSection = 'chat' | 'website';
+    52→    52→
+    53→    53→// ==================== CHAT SECTION ====================
+    54→    54→function ChatSection() {
+    55→    55→  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+    56→    56→  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+    57→    57→  const [input, setInput] = useState('');
+    58→    58→  const [isLoading, setIsLoading] = useState(false);
+    59→    59→  const messagesEndRef = useRef<HTMLDivElement>(null);
+    60→    60→
+    61→    61→  const activeConv = conversations.find((c) => c.id === activeConvId);
+    62→    62→
+    63→    63→  useEffect(() => {
+    64→    64→    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    65→    65→  }, [activeConv?.messages]);
+    66→    66→
+    67→    67→  const createNewChat = () => {
+    68→    68→    const newConv: ChatConversation = {
+    69→    69→      id: Date.now().toString(),
+    70→    70→      title: 'New Chat',
+    71→    71→      messages: [],
+    72→    72→      createdAt: new Date(),
+    73→    73→    };
+    74→    74→    setConversations((prev) => [newConv, ...prev]);
+    75→    75→    setActiveConvId(newConv.id);
+    76→    76→  };
+    77→    77→
+    78→    78→  const deleteConversation = (id: string) => {
+    79→    79→    setConversations((prev) => prev.filter((c) => c.id !== id));
+    80→    80→    if (activeConvId === id) {
+    81→    81→      setActiveConvId(null);
+    82→    82→    }
+    83→    83→  };
+    84→    84→
+    85→    85→  const sendMessage = async () => {
+    86→    86→    if (!input.trim() || isLoading) return;
+    87→    87→
+    88→    88→    let convId = activeConvId;
+    89→    89→
+    90→    90→    if (!convId) {
+    91→    91→      const newConv: ChatConversation = {
+    92→    92→        id: Date.now().toString(),
+    93→    93→        title: input.slice(0, 40) + (input.length > 40 ? '...' : ''),
+    94→    94→        messages: [],
+    95→    95→        createdAt: new Date(),
+    96→    96→      };
+    97→    97→      setConversations((prev) => [newConv, ...prev]);
+    98→    98→      convId = newConv.id;
+    99→    99→      setActiveConvId(convId);
+   100→   100→    }
+   101→   101→
+   102→   102→    const userMessage: Message = {
+   103→   103→      id: Date.now().toString(),
+   104→   104→      role: 'user',
+   105→   105→      content: input,
+   106→   106→      timestamp: new Date(),
+   107→   107→    };
+   108→   108→
+   109→   109→    setConversations((prev) =>
+   110→   110→      prev.map((c) =>
+   111→   111→        c.id === convId
+   112→   112→          ? {
+   113→   113→              ...c,
+   114→   114→              messages: [...c.messages, userMessage],
+   115→   115→              title: c.messages.length === 0 ? input.slice(0, 40) + (input.length > 40 ? '...' : '') : c.title,
+   116→   116→            }
+   117→   117→          : c
+   118→   118→      )
+   119→   119→    );
+   120→   120→
+   121→   121→    setInput('');
+   122→   122→    setIsLoading(true);
+   123→   123→
+   124→   124→    try {
+   125→   125→      const currentConv = conversations.find((c) => c.id === convId);
+   126→   126→      const chatHistory = [
+   127→   127→        ...(currentConv?.messages || []).map((m) => ({
+   128→   128→          role: m.role,
+   129→   129→          content: m.content,
+   130→   130→        })),
+   131→   131→        { role: 'user' as const, content: input },
+   132→   132→      ];
+   133→   133→
+   134→   134→      const res = await fetch('/api/chat', {
+   135→   135→        method: 'POST',
+   136→   136→        headers: { 'Content-Type': 'application/json' },
+   137→   137→        body: JSON.stringify({ messages: chatHistory }),
+   138→   138→      });
+   139→   139→
+   140→   140→      const data = await res.json();
+   141→   141→
+   142→   142→      const aiMessage: Message = {
+   143→   143→        id: (Date.now() + 1).toString(),
+   144→   144→        role: 'assistant',
+   145→   145→        content: data.reply || data.error || 'Something went wrong.',
+   146→   146→        timestamp: new Date(),
+   147→   147→      };
+   148→   148→
+   149→   149→      setConversations((prev) =>
+   150→   150→        prev.map((c) =>
+   151→   151→          c.id === convId ? { ...c, messages: [...c.messages, aiMessage] } : c
+   152→   152→        )
+   153→   153→      );
+   154→   154→    } catch {
+   155→   155→      const errorMessage: Message = {
+   156→   156→        id: (Date.now() + 1).toString(),
+   157→   157→        role: 'assistant',
+   158→   158→        content: 'Sorry, there was an error connecting to the AI. Please try again.',
+   159→   159→        timestamp: new Date(),
+   160→   160→      };
+   161→   161→      setConversations((prev) =>
+   162→   162→        prev.map((c) =>
+   163→   163→          c.id === convId ? { ...c, messages: [...c.messages, errorMessage] } : c
+   164→   164→        )
+   165→   165→      );
+   166→   166→    } finally {
+   167→   167→      setIsLoading(false);
+   168→   168→    }
+   169→   169→  };
+   170→   170→
+   171→   171→  return (
+   172→   172→    <div className="flex h-full">
+   173→   173→      {/* Sidebar - Chat History */}
+   174→   174→      <div className="w-64 border-r border-border/50 bg-muted/30 flex flex-col shrink-0">
+   175→   175→        <div className="p-3">
+   176→   176→          <Button onClick={createNewChat} className="w-full gap-2" variant="outline">
+   177→   177→            <Sparkles className="h-4 w-4" />
+   178→   178→            New Chat
+   179→   179→          </Button>
+   180→   180→        </div>
+   181→   181→        <ScrollArea className="flex-1 px-2">
+   182→   182→          <div className="space-y-1">
+   183→   183→            {conversations.map((conv) => (
+   184→   184→              <div
+   185→   185→                key={conv.id}
+   186→   186→                className={`group flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer transition-all text-sm ${
+   187→   187→                  activeConvId === conv.id
+   188→   188→                    ? 'bg-primary text-primary-foreground'
+   189→   189→                    : 'hover:bg-muted'
+   190→   190→                }`}
+   191→   191→                onClick={() => setActiveConvId(conv.id)}
+   192→   192→              >
+   193→   193→                <MessageSquare className="h-4 w-4 shrink-0" />
+   194→   194→                <span className="truncate flex-1">{conv.title}</span>
+   195→   195→                <button
+   196→   196→                  onClick={(e) => {
+   197→   197→                    e.stopPropagation();
+   198→   198→                    deleteConversation(conv.id);
+   199→   199→                  }}
+   200→   200→                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+   201→   201→                >
+   202→   202→                  <Trash2 className="h-3.5 w-3.5" />
+   203→   203→                </button>
+   204→   204→              </div>
+   205→   205→            ))}
+   206→   206→          </div>
+   207→   207→        </ScrollArea>
+   208→   208→      </div>
+   209→   209→
+   210→   210→      {/* Main Chat Area */}
+   211→   211→      <div className="flex-1 flex flex-col min-w-0">
+   212→   212→        {activeConv ? (
+   213→   213→          <>
+   214→   214→            <ScrollArea className="flex-1 p-4">
+   215→   215→              <div className="max-w-3xl mx-auto space-y-6">
+   216→   216→                {activeConv.messages.map((msg) => (
+   217→   217→                  <motion.div
+   218→   218→                    key={msg.id}
+   219→   219→                    initial={{ opacity: 0, y: 10 }}
+   220→   220→                    animate={{ opacity: 1, y: 0 }}
+   221→   221→                    transition={{ duration: 0.3 }}
+   222→   222→                    className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+   223→   223→                  >
+   224→   224→                    {msg.role === 'assistant' && (
+   225→   225→                      <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
+   226→   226→                        <Bot className="h-4 w-4" />
+   227→   227→                      </div>
+   228→   228→                    )}
+   229→   229→                    <div
+   230→   230→                      className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+   231→   231→                        msg.role === 'user'
+   232→   232→                          ? 'bg-primary text-primary-foreground'
+   233→   233→                          : 'bg-muted'
+   234→   234→                      }`}
+   235→   235→                    >
+   236→   236→                      {msg.role === 'assistant' ? (
+   237→   237→                        <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+   238→   238→                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+   239→   239→                        </div>
+   240→   240→                      ) : (
+   241→   241→                        <p className="whitespace-pre-wrap">{msg.content}</p>
+   242→   242→                      )}
+   243→   243→                    </div>
+   244→   244→                    {msg.role === 'user' && (
+   245→   245→                      <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white">
+   246→   246→                        <User className="h-4 w-4" />
+   247→   247→                      </div>
+   248→   248→                    )}
+   249→   249→                  </motion.div>
+   250→   250→                ))}
+   251→   251→                {isLoading && (
+   252→   252→                  <motion.div
+   253→   253→                    initial={{ opacity: 0, y: 10 }}
+   254→   254→                    animate={{ opacity: 1, y: 0 }}
+   255→   255→                    className="flex gap-3 justify-start"
+   256→   256→                  >
+   257→   257→                    <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
+   258→   258→                      <Bot className="h-4 w-4" />
+   259→   259→                    </div>
+   260→   260→                    <div className="bg-muted rounded-2xl px-4 py-3">
+   261→   261→                      <div className="flex gap-1.5">
+   262→   262→                        <div className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+   263→   263→                        <div className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+   264→   264→                        <div className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+   265→   265→                      </div>
+   266→   266→                    </div>
+   267→   267→                  </motion.div>
+   268→   268→                )}
+   269→   269→                <div ref={messagesEndRef} />
+   270→   270→              </div>
+   271→   271→            </ScrollArea>
+   272→   272→
+   273→   273→            {/* Input Area */}
+   274→   274→            <div className="border-t border-border/50 p-4">
+   275→   275→              <div className="max-w-3xl mx-auto flex gap-2">
+   276→   276→                <div className="flex-1 relative">
+   277→   277→                  <Textarea
+   278→   278→                    value={input}
+   279→   279→                    onChange={(e) => setInput(e.target.value)}
+   280→   280→                    onKeyDown={(e) => {
+   281→   281→                      if (e.key === 'Enter' && !e.shiftKey) {
+   282→   282→                        e.preventDefault();
+   283→   283→                        sendMessage();
+   284→   284→                      }
+   285→   285→                    }}
+   286→   286→                    placeholder="Ask me anything... (Press Enter to send)"
+   287→   287→                    className="resize-none pr-12 min-h-[48px] max-h-[200px]"
+   288→   288→                    rows={1}
+   289→   289→                  />
+   290→   290→                </div>
+   291→   291→                <Button
+   292→   292→                  onClick={sendMessage}
+   293→   293→                  disabled={!input.trim() || isLoading}
+   294→   294→                  size="icon"
+   295→   295→                  className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shrink-0"
+   296→   296→                >
+   297→   297→                  <Send className="h-5 w-5" />
+   298→   298→                </Button>
+   299→   299→              </div>
+   300→   300→            </div>
+   301→   301→          </>
+   302→   302→        ) : (
+   303→   303→          <div className="flex-1 flex items-center justify-center p-8">
+   304→   304→            <div className="text-center max-w-lg">
+   305→   305→              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+   306→   306→                <Bot className="h-10 w-10 text-white" />
+   307→   307→              </div>
+   308→   308→              <h2 className="text-2xl font-bold mb-2">Chat with Z-AI!</h2>
+   309→   309→              <p className="text-muted-foreground mb-6">
+   310→   310→                Ask me anything — coding help, explanations, advice, and more!
+   311→   311→              </p>
+   312→   312→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+   313→   313→                {[
+   314→   314→                  { icon: <Code className="h-4 w-4" />, text: 'Coding Help' },
+   315→   315→                  { icon: <Brain className="h-4 w-4" />, text: 'Explain Topics' },
+   316→   316→                  { icon: <Palette className="h-4 w-4" />, text: 'Creative Ideas' },
+   317→   317→                  { icon: <Zap className="h-4 w-4" />, text: 'Quick Answers' },
+   318→   318→                ].map((item, i) => (
+   319→   319→                  <button
+   320→   320→                    key={i}
+   321→   321→                    onClick={() => {
+   322→   322→                      setInput(item.text);
+   323→   323→                      createNewChat();
+   324→   324→                    }}
+   325→   325→                    className="flex items-center gap-2 p-3 rounded-xl border border-border/50 hover:bg-muted transition-colors text-left"
+   326→   326→                  >
+   327→   327→                    {item.icon}
+   328→   328→                    <span>{item.text}</span>
+   329→   329→                  </button>
+   330→   330→                ))}
+   331→   331→              </div>
+   332→   332→              <Button onClick={createNewChat} className="mt-6 gap-2">
+   333→   333→                <Sparkles className="h-4 w-4" />
+   334→   334→                Start New Chat
+   335→   335→              </Button>
+   336→   336→            </div>
+   337→   337→          </div>
+   338→   338→        )}
+   339→   339→      </div>
+   340→   340→    </div>
+   341→   341→  );
+   342→   342→}
+   343→   343→
+   344→   344→// ==================== WEBSITE CREATOR SECTION ====================
+   345→   345→function WebsiteCreatorSection() {
+   346→   346→  const [description, setDescription] = useState('');
+   347→   347→  const [generatedHtml, setGeneratedHtml] = useState('');
+   348→   348→  const [isGenerating, setIsGenerating] = useState(false);
+   349→   349→  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
+   350→   350→  const [copied, setCopied] = useState(false);
+   351→   351→
+   352→   352→  const generateWebsite = async () => {
+   353→   353→    if (!description.trim() || isGenerating) return;
+   354→   354→
+   355→   355→    setIsGenerating(true);
+   356→   356→    setGeneratedHtml('');
+   357→   357→
+   358→   358→    try {
+   359→   359→      const res = await fetch('/api/generate-website', {
+   360→   360→        method: 'POST',
+   361→   361→        headers: { 'Content-Type': 'application/json' },
+   362→   362→        body: JSON.stringify({ description }),
+   363→   363→      });
+   364→   364→
+   365→   365→      const data = await res.json();
+   366→   366→
+   367→   367→      if (data.html) {
+   368→   368→        setGeneratedHtml(data.html);
+   369→   369→        setActiveTab('preview');
+   370→   370→      } else {
+   371→   371→        setGeneratedHtml(`<html><body><h1>Error generating website</h1><p>${data.error || 'Unknown error'}</p></body></html>`);
+   372→   372→      }
+   373→   373→    } catch {
+   374→   374→      setGeneratedHtml('<html><body><h1>Error</h1><p>Failed to connect to server</p></body></html>');
+   375→   375→    } finally {
+   376→   376→      setIsGenerating(false);
+   377→   377→    }
+   378→   378→  };
+   379→   379→
+   380→   380→  const copyCode = async () => {
+   381→   381→    await navigator.clipboard.writeText(generatedHtml);
+   382→   382→    setCopied(true);
+   383→   383→    setTimeout(() => setCopied(false), 2000);
+   384→   384→  };
+   385→   385→
+   386→   386→  const downloadHtml = () => {
+   387→   387→    const blob = new Blob([generatedHtml], { type: 'text/html' });
+   388→   388→    const url = URL.createObjectURL(blob);
+   389→   389→    const a = document.createElement('a');
+   390→   390→    a.href = url;
+   391→   391→    a.download = 'website.html';
+   392→   392→    a.click();
+   393→   393→    URL.revokeObjectURL(url);
+   394→   394→  };
+   395→   395→
+   396→   396→  const templates = [
+   397→   397→    { name: 'Portfolio', desc: 'Personal portfolio website', icon: <User className="h-5 w-5" /> },
+   398→   398→    { name: 'Business', desc: 'Professional business site', icon: <Globe className="h-5 w-5" /> },
+   399→   399→    { name: 'Restaurant', desc: 'Restaurant & food menu', icon: <Palette className="h-5 w-5" /> },
+   400→   400→    { name: 'Landing Page', desc: 'Product landing page', icon: <Zap className="h-5 w-5" /> },
+   401→   401→    { name: 'Blog', desc: 'Personal blog website', icon: <Code className="h-5 w-5" /> },
+   402→   402→    { name: 'E-Commerce', desc: 'Online shop storefront', icon: <Sparkles className="h-5 w-5" /> },
+   403→   403→  ];
+   404→   404→
+   405→   405→  return (
+   406→   406→    <div className="flex flex-col h-full">
+   407→   407→      {/* Top Input Area */}
+   408→   408→      <div className="border-b border-border/50 p-4">
+   409→   409→        <div className="max-w-4xl mx-auto">
+   410→   410→          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+   411→   411→            <Globe className="h-5 w-5 text-emerald-500" />
+   412→   412→            Website Creator
+   413→   413→          </h2>
+   414→   414→          <div className="flex gap-2">
+   415→   415→            <Input
+   416→   416→              value={description}
+   417→   417→              onChange={(e) => setDescription(e.target.value)}
+   418→   418→              onKeyDown={(e) => {
+   419→   419→                if (e.key === 'Enter') generateWebsite();
+   420→   420→              }}
+   421→   421→              placeholder="Describe the website you want to create... (e.g., 'A modern coffee shop website with menu and contact page')"
+   422→   422→              className="flex-1"
+   423→   423→            />
+   424→   424→            <Button
+   425→   425→              onClick={generateWebsite}
+   426→   426→              disabled={!description.trim() || isGenerating}
+   427→   427→              className="gap-2 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shrink-0"
+   428→   428→            >
+   429→   429→              {isGenerating ? (
+   430→   430→                <Loader2 className="h-4 w-4 animate-spin" />
+   431→   431→              ) : (
+   432→   432→                <Sparkles className="h-4 w-4" />
+   433→   433→              )}
+   434→   434→              Generate
+   435→   435→            </Button>
+   436→   436→          </div>
+   437→   437→
+   438→   438→          {/* Template Quick Picks */}
+   439→   439→          <div className="mt-3 flex gap-2 flex-wrap">
+   440→   440→            {templates.map((t, i) => (
+   441→   441→              <button
+   442→   442→                key={i}
+   443→   443→                onClick={() => setDescription(t.desc)}
+   444→   444→                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border/50 hover:bg-muted transition-colors"
+   445→   445→              >
+   446→   446→                {t.icon}
+   447→   447→                {t.name}
+   448→   448→              </button>
+   449→   449→            ))}
+   450→   450→          </div>
+   451→   451→        </div>
+   452→   452→      </div>
+   453→   453→
+   454→   454→      {/* Result Area */}
+   455→   455→      <div className="flex-1 min-h-0">
+   456→   456→        {generatedHtml ? (
+   457→   457→          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'code' | 'preview')} className="h-full flex flex-col">
+   458→   458→            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
+   459→   459→              <TabsList>
+   460→   460→                <TabsTrigger value="preview" className="gap-1.5">
+   461→   461→                  <Eye className="h-3.5 w-3.5" />
+   462→   462→                  Preview
+   463→   463→                </TabsTrigger>
+   464→   464→                <TabsTrigger value="code" className="gap-1.5">
+   465→   465→                  <Code className="h-3.5 w-3.5" />
+   466→   466→                  Code
+   467→   467→                </TabsTrigger>
+   468→   468→              </TabsList>
+   469→   469→              <div className="flex gap-2">
+   470→   470→                <Button variant="outline" size="sm" onClick={copyCode} className="gap-1.5">
+   471→   471→                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+   472→   472→                  {copied ? 'Copied!' : 'Copy'}
+   473→   473→                </Button>
+   474→   474→                <Button variant="outline" size="sm" onClick={downloadHtml} className="gap-1.5">
+   475→   475→                  <Download className="h-3.5 w-3.5" />
+   476→   476→                  Download
+   477→   477→                </Button>
+   478→   478→                <Button variant="outline" size="sm" onClick={generateWebsite} disabled={isGenerating} className="gap-1.5">
+   479→   479→                  <RotateCcw className="h-3.5 w-3.5" />
+   480→   480→                  Regenerate
+   481→   481→                </Button>
+   482→   482→              </div>
+   483→   483→            </div>
+   484→   484→            <TabsContent value="preview" className="flex-1 m-0 p-0">
+   485→   485→              <iframe
+   486→   486→                srcDoc={generatedHtml}
+   487→   487→                className="w-full h-full border-0"
+   488→   488→                title="Website Preview"
+   489→   489→                sandbox="allow-scripts"
+   490→   490→              />
+   491→   491→            </TabsContent>
+   492→   492→            <TabsContent value="code" className="flex-1 m-0 p-0 overflow-auto">
+   493→   493→              <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words bg-muted/30 h-full overflow-auto">
+   494→   494→                <code>{generatedHtml}</code>
+   495→   495→              </pre>
+   496→   496→            </TabsContent>
+   497→   497→          </Tabs>
+   498→   498→        ) : isGenerating ? (
+   499→   499→          <div className="h-full flex items-center justify-center">
+   500→   500→            <div className="text-center">
+   501→   501→              <Loader2 className="h-12 w-12 animate-spin text-emerald-500 mx-auto mb-4" />
+   502→   502→              <p className="text-lg font-medium">Generating your website...</p>
+   503→   503→              <p className="text-muted-foreground text-sm mt-1">This may take a moment</p>
+   504→   504→            </div>
+   505→   505→          </div>
+   506→   506→        ) : (
+   507→   507→          <div className="h-full flex items-center justify-center p-8">
+   508→   508→            <div className="text-center max-w-md">
+   509→   509→              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+   510→   510→                <Globe className="h-10 w-10 text-white" />
+   511→   511→              </div>
+   512→   512→              <h3 className="text-xl font-bold mb-2">Create a Website</h3>
+   513→   513→              <p className="text-muted-foreground mb-4">
+   514→   514→                Describe what kind of website you want, and I&apos;ll generate it for you instantly!
+   515→   515→              </p>
+   516→   516→              <div className="grid grid-cols-2 gap-2 text-sm">
+   517→   517→                {templates.map((t, i) => (
+   518→   518→                  <button
+   519→   519→                    key={i}
+   520→   520→                    onClick={() => setDescription(t.desc)}
+   521→   521→                    className="flex items-center gap-2 p-3 rounded-xl border border-border/50 hover:bg-muted transition-colors text-left"
+   522→   522→                  >
+   523→   523→                    <div className="shrink-0">{t.icon}</div>
+   524→   524→                    <div>
+   525→   525→                      <div className="font-medium">{t.name}</div>
+   526→   526→                      <div className="text-xs text-muted-foreground">{t.desc}</div>
+   527→   527→                    </div>
+   528→   528→                  </button>
+   529→   529→                ))}
+   530→   530→              </div>
+   531→   531→            </div>
+   532→   532→          </div>
+   533→   533→        )}
+   534→   534→      </div>
+   535→   535→    </div>
+   536→   536→  );
+   537→   537→}
+   538→   538→
+   539→   539→// ==================== MAIN APP ====================
+   540→   540→export default function Home() {
+   541→   541→  const [activeSection, setActiveSection] = useState<ActiveSection>('chat');
+   542→   542→  const [sidebarOpen, setSidebarOpen] = useState(true);
+   543→   543→  const [isDark, setIsDark] = useState(() => {
+   544→   544→    if (typeof window !== 'undefined') {
+   545→   545→      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+   546→   546→    }
+   547→   547→    return false;
+   548→   548→  });
+   549→   549→
+   550→   550→  useEffect(() => {
+   551→   551→    document.documentElement.classList.toggle('dark', isDark);
+   552→   552→  }, [isDark]);
+   553→   553→
+   554→   554→  const toggleTheme = () => {
+   555→   555→    setIsDark((prev) => !prev);
+   556→   556→  };
+   557→   557→
+   558→   558→  const navItems = [
+   559→   559→    { id: 'chat' as ActiveSection, label: 'AI Chat', icon: MessageSquare, desc: 'Ask anything' },
+   560→   560→    { id: 'website' as ActiveSection, label: 'Website Creator', icon: Globe, desc: 'Build websites' },
+   561→   561→  ];
+   562→   562→
+   563→   563→  return (
+   564→   564→    <div className="h-screen flex bg-background text-foreground overflow-hidden">
+   565→   565→      {/* Sidebar */}
+   566→   566→      <motion.aside
+   567→   567→        initial={false}
+   568→   568→        animate={{ width: sidebarOpen ? 240 : 0 }}
+   569→   569→        className="border-r border-border/50 bg-muted/30 overflow-hidden shrink-0 flex flex-col"
+   570→   570→      >
+   571→   571→        {sidebarOpen && (
+   572→   572→          <div className="w-60 flex flex-col h-full">
+   573→   573→            {/* Logo */}
+   574→   574→            <div className="p-4 border-b border-border/50">
+   575→   575→              <div className="flex items-center gap-3">
+   576→   576→                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+   577→   577→                  <Sparkles className="h-5 w-5 text-white" />
+   578→   578→                </div>
+   579→   579→                <div>
+   580→   580→                  <h1 className="font-bold text-lg leading-tight">Z-AI</h1>
+   581→   581→                  <p className="text-xs text-muted-foreground">AI Assistant</p>
+   582→   582→                </div>
+   583→   583→              </div>
+   584→   584→            </div>
+   585→   585→
+   586→   586→            {/* Nav Items */}
+   587→   587→            <nav className="flex-1 p-3 space-y-1">
+   588→   588→              {navItems.map((item) => (
+   589→   589→                <button
+   590→   590→                  key={item.id}
+   591→   591→                  onClick={() => setActiveSection(item.id)}
+   592→   592→                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left ${
+   593→   593→                    activeSection === item.id
+   594→   594→                      ? 'bg-primary text-primary-foreground shadow-md'
+   595→   595→                      : 'hover:bg-muted'
+   596→   596→                  }`}
+   597→   597→                >
+   598→   598→                  <item.icon className="h-5 w-5 shrink-0" />
+   599→   599→                  <div>
+   600→   600→                    <div className="font-medium text-sm">{item.label}</div>
+   601→   601→                    <div className={`text-xs ${activeSection === item.id ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+   602→   602→                      {item.desc}
+   603→   603→                    </div>
+   604→   604→                  </div>
+   605→   605→                  {activeSection === item.id && (
+   606→   606→                    <ChevronRight className="h-4 w-4 ml-auto shrink-0" />
+   607→   607→                  )}
+   608→   608→                </button>
+   609→   609→              ))}
+   610→   610→            </nav>
+   611→   611→
+   612→   612→            {/* Bottom */}
+   613→   613→            <div className="p-3 border-t border-border/50">
+   614→   614→              <button
+   615→   615→                onClick={toggleTheme}
+   616→   616→                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted transition-colors text-sm"
+   617→   617→              >
+   618→   618→                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+   619→   619→                {isDark ? 'Light Mode' : 'Dark Mode'}
+   620→   620→              </button>
+   621→   621→            </div>
+   622→   622→          </div>
+   623→   623→        )}
+   624→   624→      </motion.aside>
+   625→   625→
+   626→   626→      {/* Main Content */}
+   627→   627→      <main className="flex-1 flex flex-col min-w-0">
+   628→   628→        {/* Top Bar */}
+   629→   629→        <header className="h-14 border-b border-border/50 flex items-center justify-between px-4 shrink-0">
+   630→   630→          <div className="flex items-center gap-3">
+   631→   631→            <button
+   632→   632→              onClick={() => setSidebarOpen(!sidebarOpen)}
+   633→   633→              className="p-2 rounded-lg hover:bg-muted transition-colors"
+   634→   634→            >
+   635→   635→              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+   636→   636→            </button>
+   637→   637→            <div className="flex items-center gap-2">
+   638→   638→              {navItems.map((item) => (
+   639→   639→                activeSection === item.id && (
+   640→   640→                  <div key={item.id} className="flex items-center gap-2">
+   641→   641→                    <item.icon className="h-4 w-4 text-emerald-500" />
+   642→   642→                    <span className="font-semibold text-sm">{item.label}</span>
+   643→   643→                  </div>
+   644→   644→                )
+   645→   645→              ))}
+   646→   646→            </div>
+   647→   647→          </div>
+   648→   648→          <div className="flex items-center gap-2">
+   649→   649→            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-medium">
+   650→   650→              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+   651→   651→              Online
+   652→   652→            </div>
+   653→   653→          </div>
+   654→   654→        </header>
+   655→   655→
+   656→   656→        {/* Content */}
+   657→   657→        <div className="flex-1 min-h-0 relative">
+   658→   658→          <div className={`h-full ${activeSection === 'chat' ? '' : 'hidden'}`}>
+   659→   659→            <ChatSection />
+   660→   660→          </div>
+   661→   661→          <div className={`h-full ${activeSection === 'website' ? '' : 'hidden'}`}>
+   662→   662→            <WebsiteCreatorSection />
+   663→   663→          </div>
+   664→   664→        </div>
+   665→   665→      </main>
+   666→   666→    </div>
+   667→   667→  );
+   668→   668→}
+   669→   669→

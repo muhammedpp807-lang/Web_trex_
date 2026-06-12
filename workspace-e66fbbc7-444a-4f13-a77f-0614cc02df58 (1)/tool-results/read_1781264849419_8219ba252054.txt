@@ -1,0 +1,1242 @@
+     1→     1→     1→'use client';
+     2→     2→     2→
+     3→     3→     3→import { useState, useRef, useEffect } from 'react';
+     4→     4→     4→import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+     5→     5→     5→import {
+     6→     6→     6→  MessageSquare,
+     7→     7→     7→  Globe,
+     8→     8→     8→  Sparkles,
+     9→     9→     9→  Send,
+    10→    10→    10→  Bot,
+    11→    11→    11→  User,
+    12→    12→    12→  Code,
+    13→    13→    13→  Eye,
+    14→    14→    14→  Copy,
+    15→    15→    15→  Check,
+    16→    16→    16→  Loader2,
+    17→    17→    17→  Zap,
+    18→    18→    18→  Brain,
+    19→    19→    19→  Palette,
+    20→    20→    20→  ChevronRight,
+    21→    21→    21→  Menu,
+    22→    22→    22→  X,
+    23→    23→    23→  Moon,
+    24→    24→    24→  Sun,
+    25→    25→    25→  Trash2,
+    26→    26→    26→  RotateCcw,
+    27→    27→    27→  Download,
+    28→    28→    28→  ArrowDown,
+    29→    29→    29→  Swords,
+    30→    30→    30→  Cpu,
+    31→    31→    31→  Rocket,
+    32→    32→    32→  Shield,
+    33→    33→    33→  Trophy,
+    34→    34→    34→  Star,
+    35→    35→    35→  Flame,
+    36→    36→    36→  Target,
+    37→    37→    37→  TrendingUp,
+    38→    38→    38→  Crown,
+    39→    39→    39→  Home as HomeIcon,
+    40→    40→    40→} from 'lucide-react';
+    41→    41→    41→import { Button } from '@/components/ui/button';
+    42→    42→    42→import { Textarea } from '@/components/ui/textarea';
+    43→    43→    43→import { Input } from '@/components/ui/input';
+    44→    44→    44→import { ScrollArea } from '@/components/ui/scroll-area';
+    45→    45→    45→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    46→    46→    46→import ReactMarkdown from 'react-markdown';
+    47→    47→    47→
+    48→    48→    48→// Types
+    49→    49→    49→interface Message {
+    50→    50→    50→  id: string;
+    51→    51→    51→  role: 'user' | 'assistant';
+    52→    52→    52→  content: string;
+    53→    53→    53→  timestamp: Date;
+    54→    54→    54→}
+    55→    55→    55→
+    56→    56→    56→interface ChatConversation {
+    57→    57→    57→  id: string;
+    58→    58→    58→  title: string;
+    59→    59→    59→  messages: Message[];
+    60→    60→    60→  createdAt: Date;
+    61→    61→    61→}
+    62→    62→    62→
+    63→    63→    63→type ActiveSection = 'arena' | 'chat' | 'website';
+    64→    64→    64→
+    65→    65→    65→// ==================== ANIMATION VARIANTS ====================
+    66→    66→    66→const fadeInUp = {
+    67→    67→    67→  initial: { opacity: 0, y: 30 },
+    68→    68→    68→  animate: { opacity: 1, y: 0 },
+    69→    69→    69→  exit: { opacity: 0, y: -10 },
+    70→    70→    70→  transition: { duration: 0.5 },
+    71→    71→    71→};
+    72→    72→    72→
+    73→    73→    73→const staggerContainer = {
+    74→    74→    74→  animate: { transition: { staggerChildren: 0.08 } },
+    75→    75→    75→};
+    76→    76→    76→
+    77→    77→    77→const staggerItem = {
+    78→    78→    78→  initial: { opacity: 0, y: 20 },
+    79→    79→    79→  animate: { opacity: 1, y: 0 },
+    80→    80→    80→};
+    81→    81→    81→
+    82→    82→    82→const scaleIn = {
+    83→    83→    83→  initial: { opacity: 0, scale: 0.8 },
+    84→    84→    84→  animate: { opacity: 1, scale: 1 },
+    85→    85→    85→  transition: { type: 'spring', stiffness: 300, damping: 25 },
+    86→    86→    86→};
+    87→    87→    87→
+    88→    88→    88→const glowPulse = {
+    89→    89→    89→  animate: {
+    90→    90→    90→    boxShadow: [
+    91→    91→    91→      '0 0 20px rgba(16, 185, 129, 0.1)',
+    92→    92→    92→      '0 0 40px rgba(16, 185, 129, 0.3)',
+    93→    93→    93→      '0 0 20px rgba(16, 185, 129, 0.1)',
+    94→    94→    94→    ],
+    95→    95→    95→  },
+    96→    96→    96→  transition: { duration: 2, repeat: Infinity },
+    97→    97→    97→};
+    98→    98→    98→
+    99→    99→    99→// ==================== ANIMATED COUNTER ====================
+   100→   100→   100→function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+   101→   101→   101→  const [count, setCount] = useState(0);
+   102→   102→   102→  const ref = useRef<HTMLSpanElement>(null);
+   103→   103→   103→  const [hasAnimated, setHasAnimated] = useState(false);
+   104→   104→   104→
+   105→   105→   105→  useEffect(() => {
+   106→   106→   106→    const observer = new IntersectionObserver(
+   107→   107→   107→      ([entry]) => {
+   108→   108→   108→        if (entry.isIntersecting && !hasAnimated) {
+   109→   109→   109→          setHasAnimated(true);
+   110→   110→   110→          let start = 0;
+   111→   111→   111→          const duration = 1500;
+   112→   112→   112→          const startTime = Date.now();
+   113→   113→   113→          const animate = () => {
+   114→   114→   114→            const elapsed = Date.now() - startTime;
+   115→   115→   115→            const progress = Math.min(elapsed / duration, 1);
+   116→   116→   116→            const eased = 1 - Math.pow(1 - progress, 3);
+   117→   117→   117→            start = Math.floor(eased * target);
+   118→   118→   118→            setCount(start);
+   119→   119→   119→            if (progress < 1) requestAnimationFrame(animate);
+   120→   120→   120→          };
+   121→   121→   121→          requestAnimationFrame(animate);
+   122→   122→   122→        }
+   123→   123→   123→      },
+   124→   124→   124→      { threshold: 0.5 }
+   125→   125→   125→    );
+   126→   126→   126→    if (ref.current) observer.observe(ref.current);
+   127→   127→   127→    return () => observer.disconnect();
+   128→   128→   128→  }, [target, hasAnimated]);
+   129→   129→   129→
+   130→   130→   130→  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
+   131→   131→   131→}
+   132→   132→   132→
+   133→   133→   133→// ==================== FLOATING PARTICLES ====================
+   134→   134→   134→function FloatingParticles({ count = 12 }: { count?: number }) {
+   135→   135→   135→  return (
+   136→   136→   136→    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+   137→   137→   137→      {Array.from({ length: count }).map((_, i) => (
+   138→   138→   138→        <motion.div
+   139→   139→   139→          key={i}
+   140→   140→   140→          className="absolute rounded-full bg-emerald-500/10"
+   141→   141→   141→          style={{
+   142→   142→   142→            width: `${4 + Math.random() * 8}px`,
+   143→   143→   143→            height: `${4 + Math.random() * 8}px`,
+   144→   144→   144→            left: `${Math.random() * 100}%`,
+   145→   145→   145→            top: `${Math.random() * 100}%`,
+   146→   146→   146→          }}
+   147→   147→   147→          animate={{
+   148→   148→   148→            y: [0, -40 - Math.random() * 60, 0],
+   149→   149→   149→            x: [0, (Math.random() - 0.5) * 30, 0],
+   150→   150→   150→            opacity: [0.1, 0.4, 0.1],
+   151→   151→   151→            scale: [1, 1.5, 1],
+   152→   152→   152→          }}
+   153→   153→   153→          transition={{
+   154→   154→   154→            duration: 4 + Math.random() * 4,
+   155→   155→   155→            repeat: Infinity,
+   156→   156→   156→            delay: Math.random() * 3,
+   157→   157→   157→            ease: 'easeInOut',
+   158→   158→   158→          }}
+   159→   159→   159→        />
+   160→   160→   160→      ))}
+   161→   161→   161→    </div>
+   162→   162→   162→  );
+   163→   163→   163→}
+   164→   164→   164→
+   165→   165→   165→// ==================== MESH GRADIENT BACKGROUND ====================
+   166→   166→   166→function MeshGradient() {
+   167→   167→   167→  return (
+   168→   168→   168→    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+   169→   169→   169→      <motion.div
+   170→   170→   170→        className="absolute -top-1/2 -left-1/2 w-full h-full rounded-full bg-emerald-500/5 blur-[120px]"
+   171→   171→   171→        animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
+   172→   172→   172→        transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+   173→   173→   173→      />
+   174→   174→   174→      <motion.div
+   175→   175→   175→        className="absolute -bottom-1/2 -right-1/2 w-full h-full rounded-full bg-teal-500/5 blur-[120px]"
+   176→   176→   176→        animate={{ x: [0, -80, 0], y: [0, -60, 0] }}
+   177→   177→   177→        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+   178→   178→   178→      />
+   179→   179→   179→      <motion.div
+   180→   180→   180→        className="absolute top-1/4 right-1/4 w-1/2 h-1/2 rounded-full bg-cyan-500/3 blur-[100px]"
+   181→   181→   181→        animate={{ x: [0, 50, 0], y: [0, -40, 0] }}
+   182→   182→   182→        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+   183→   183→   183→      />
+   184→   184→   184→    </div>
+   185→   185→   185→  );
+   186→   186→   186→}
+   187→   187→   187→
+   188→   188→   188→// ==================== SCROLL TO BOTTOM ====================
+   189→   189→   189→function ScrollToBottom({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | null> }) {
+   190→   190→   190→  const [show, setShow] = useState(false);
+   191→   191→   191→
+   192→   192→   192→  useEffect(() => {
+   193→   193→   193→    const el = scrollRef.current;
+   194→   194→   194→    if (!el) return;
+   195→   195→   195→    const onScroll = () => setShow(el.scrollHeight - el.scrollTop - el.clientHeight > 200);
+   196→   196→   196→    el.addEventListener('scroll', onScroll);
+   197→   197→   197→    return () => el.removeEventListener('scroll', onScroll);
+   198→   198→   198→  }, [scrollRef]);
+   199→   199→   199→
+   200→   200→   200→  if (!show) return null;
+   201→   201→   201→
+   202→   202→   202→  return (
+   203→   203→   203→    <motion.button
+   204→   204→   204→      initial={{ opacity: 0, scale: 0.8 }}
+   205→   205→   205→      animate={{ opacity: 1, scale: 1 }}
+   206→   206→   206→      exit={{ opacity: 0, scale: 0.8 }}
+   207→   207→   207→      onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })}
+   208→   208→   208→      className="absolute bottom-24 right-6 z-10 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 flex items-center justify-center hover:shadow-emerald-500/50 hover:shadow-xl transition-all"
+   209→   209→   209→    >
+   210→   210→   210→      <ArrowDown className="h-5 w-5" />
+   211→   211→   211→    </motion.button>
+   212→   212→   212→  );
+   213→   213→   213→}
+   214→   214→   214→
+   215→   215→   215→// ==================== ARENA HOME SECTION ====================
+   216→   216→   216→function ArenaHomeSection({ onNavigate }: { onNavigate: (section: ActiveSection) => void }) {
+   217→   217→   217→  const containerRef = useRef<HTMLDivElement>(null);
+   218→   218→   218→  const { scrollYProgress } = useScroll({ container: containerRef });
+   219→   219→   219→  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -50]);
+   220→   220→   220→  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0.5]);
+   221→   221→   221→
+   222→   222→   222→  const features = [
+   223→   223→   223→    { icon: <Swords className="h-6 w-6" />, title: 'AI Arena', desc: 'Battle-test your ideas with the most powerful AI. Ask anything, get instant answers.', color: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-500/20', action: 'chat' as ActiveSection },
+   224→   224→   224→    { icon: <Globe className="h-6 w-6" />, title: 'Website Forge', desc: 'Generate complete websites from a single description. Preview, edit, and download instantly.', color: 'from-cyan-500 to-blue-500', shadow: 'shadow-cyan-500/20', action: 'website' as ActiveSection },
+   225→   225→   225→    { icon: <Brain className="h-6 w-6" />, title: 'Deep Knowledge', desc: 'From coding to philosophy, get thorough explanations with examples and context.', color: 'from-purple-500 to-pink-500', shadow: 'shadow-purple-500/20', action: 'chat' as ActiveSection },
+   226→   226→   226→    { icon: <Zap className="h-6 w-6" />, title: 'Lightning Fast', desc: 'Powered by cutting-edge AI with optimized response times under 2 seconds.', color: 'from-orange-500 to-amber-500', shadow: 'shadow-orange-500/20', action: 'chat' as ActiveSection },
+   227→   227→   227→  ];
+   228→   228→   228→
+   229→   229→   229→  const leaderboard = [
+   230→   230→   230→    { rank: 1, name: 'Web_Trex_ AI', score: 2847, badge: <Crown className="h-4 w-4 text-amber-500" /> },
+   231→   231→   231→    { rank: 2, name: 'Code Expert', score: 2634, badge: <Trophy className="h-4 w-4 text-gray-400" /> },
+   232→   232→   232→    { rank: 3, name: 'Creative Pro', score: 2421, badge: <Star className="h-4 w-4 text-amber-700" /> },
+   233→   233→   233→  ];
+   234→   234→   234→
+   235→   235→   235→  const stats = [
+   236→   236→   236→    { label: 'Chats Served', value: 12847, suffix: '+', icon: <MessageSquare className="h-5 w-5" /> },
+   237→   237→   237→    { label: 'Websites Built', value: 3421, suffix: '+', icon: <Globe className="h-5 w-5" /> },
+   238→   238→   238→    { label: 'Uptime', value: 99, suffix: '.9%', icon: <Shield className="h-5 w-5" /> },
+   239→   239→   239→    { label: 'Avg Response', value: 1, suffix: '.8s', icon: <Cpu className="h-5 w-5" /> },
+   240→   240→   240→  ];
+   241→   241→   241→
+   242→   242→   242→  return (
+   243→   243→   243→    <ScrollArea className="h-full" ref={containerRef}>
+   244→   244→   244→      <div className="relative">
+   245→   245→   245→        {/* Hero Section */}
+   246→   246→   246→        <motion.section style={{ y: heroY, opacity: heroOpacity }} className="relative min-h-[85vh] flex items-center justify-center px-6 py-20 overflow-hidden">
+   247→   247→   247→          <MeshGradient />
+   248→   248→   248→          <FloatingParticles count={20} />
+   249→   249→   249→
+   250→   250→   250→          <motion.div
+   251→   251→   251→            className="text-center max-w-4xl mx-auto relative z-10"
+   252→   252→   252→            initial="initial"
+   253→   253→   253→            animate="animate"
+   254→   254→   254→            variants={staggerContainer}
+   255→   255→   255→          >
+   256→   256→   256→            {/* Animated Logo */}
+   257→   257→   257→            <motion.div variants={scaleIn} className="relative w-28 h-28 mx-auto mb-10">
+   258→   258→   258→              <motion.div
+   259→   259→   259→                animate={{ rotate: 360 }}
+   260→   260→   260→                transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+   261→   261→   261→                className="absolute inset-0 rounded-2xl border-2 border-dashed border-emerald-500/30"
+   262→   262→   262→              />
+   263→   263→   263→              <motion.div
+   264→   264→   264→                animate={{ rotate: -360 }}
+   265→   265→   265→                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+   266→   266→   266→                className="absolute inset-3 rounded-xl border border-emerald-500/20"
+   267→   267→   267→              />
+   268→   268→   268→              <div className="absolute inset-5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/40">
+   269→   269→   269→                <Swords className="h-10 w-10 text-white" />
+   270→   270→   270→              </div>
+   271→   271→   271→              <motion.div
+   272→   272→   272→                className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-400"
+   273→   273→   273→                animate={{ scale: [1, 1.4, 1], opacity: [1, 0.7, 1] }}
+   274→   274→   274→                transition={{ duration: 2, repeat: Infinity }}
+   275→   275→   275→              />
+   276→   276→   276→              <motion.div
+   277→   277→   277→                className="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-teal-400"
+   278→   278→   278→                animate={{ scale: [1, 1.3, 1] }}
+   279→   279→   279→                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+   280→   280→   280→              />
+   281→   281→   281→            </motion.div>
+   282→   282→   282→
+   283→   283→   283→            {/* Title */}
+   284→   284→   284→            <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-black mb-4 tracking-tight">
+   285→   285→   285→              <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+   286→   286→   286→                Web_Trex_
+   287→   287→   287→              </span>
+   288→   288→   288→            </motion.h1>
+   289→   289→   289→
+   290→   290→   290→            <motion.div variants={fadeInUp} className="flex items-center justify-center gap-3 mb-6">
+   291→   291→   291→              <div className="h-px w-12 bg-gradient-to-r from-transparent to-emerald-500/50" />
+   292→   292→   292→              <span className="text-sm font-bold uppercase tracking-[0.3em] text-emerald-500">Arena</span>
+   293→   293→   293→              <div className="h-px w-12 bg-gradient-to-l from-transparent to-emerald-500/50" />
+   294→   294→   294→            </motion.div>
+   295→   295→   295→
+   296→   296→   296→            <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+   297→   297→   297→              Your AI-powered arena for answers, code, and creativity.
+   298→   298→   298→              <span className="text-emerald-500 font-semibold"> Battle-tested intelligence.</span>
+   299→   299→   299→            </motion.p>
+   300→   300→   300→
+   301→   301→   301→            {/* CTA Buttons */}
+   302→   302→   302→            <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-center gap-4 mb-12">
+   303→   303→   303→              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   304→   304→   304→                <Button
+   305→   305→   305→                  onClick={() => onNavigate('chat')}
+   306→   306→   306→                  className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all px-8 py-6 text-lg font-semibold"
+   307→   307→   307→                >
+   308→   308→   308→                  <Rocket className="h-5 w-5" />
+   309→   309→   309→                  Enter Arena
+   310→   310→   310→                </Button>
+   311→   311→   311→              </motion.div>
+   312→   312→   312→              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   313→   313→   313→                <Button
+   314→   314→   314→                  onClick={() => onNavigate('website')}
+   315→   315→   315→                  variant="outline"
+   316→   316→   316→                  className="gap-2 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50 px-8 py-6 text-lg"
+   317→   317→   317→                >
+   318→   318→   318→                  <Globe className="h-5 w-5" />
+   319→   319→   319→                  Build Website
+   320→   320→   320→                </Button>
+   321→   321→   321→              </motion.div>
+   322→   322→   322→            </motion.div>
+   323→   323→   323→
+   324→   324→   324→            {/* Scroll hint */}
+   325→   325→   325→            <motion.div
+   326→   326→   326→              animate={{ y: [0, 8, 0] }}
+   327→   327→   327→              transition={{ duration: 2, repeat: Infinity }}
+   328→   328→   328→              className="text-muted-foreground/50"
+   329→   329→   329→            >
+   330→   330→   330→              <ArrowDown className="h-5 w-5 mx-auto" />
+   331→   331→   331→              <span className="text-xs">Scroll to explore</span>
+   332→   332→   332→            </motion.div>
+   333→   333→   333→          </motion.div>
+   334→   334→   334→        </motion.section>
+   335→   335→   335→
+   336→   336→   336→        {/* Stats Section */}
+   337→   337→   337→        <section className="px-6 py-16 border-t border-border/20">
+   338→   338→   338→          <div className="max-w-5xl mx-auto">
+   339→   339→   339→            <motion.div
+   340→   340→   340→              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+   341→   341→   341→              initial="initial"
+   342→   342→   342→              whileInView="animate"
+   343→   343→   343→              viewport={{ once: true, margin: '-100px' }}
+   344→   344→   344→              variants={staggerContainer}
+   345→   345→   345→            >
+   346→   346→   346→              {stats.map((stat, i) => (
+   347→   347→   347→                <motion.div
+   348→   348→   348→                  key={i}
+   349→   349→   349→                  variants={staggerItem}
+   350→   350→   350→                  whileHover={{ y: -4, scale: 1.02 }}
+   351→   351→   351→                  className="relative p-5 rounded-2xl border border-border/20 bg-muted/10 backdrop-blur-sm text-center group overflow-hidden"
+   352→   352→   352→                >
+   353→   353→   353→                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+   354→   354→   354→                  <div className="relative z-10">
+   355→   355→   355→                    <div className="text-emerald-500 mx-auto w-fit mb-2">{stat.icon}</div>
+   356→   356→   356→                    <div className="text-2xl md:text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
+   357→   357→   357→                      <AnimatedCounter target={stat.value} suffix={stat.suffix} />
+   358→   358→   358→                    </div>
+   359→   359→   359→                    <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{stat.label}</div>
+   360→   360→   360→                  </div>
+   361→   361→   361→                </motion.div>
+   362→   362→   362→              ))}
+   363→   363→   363→            </motion.div>
+   364→   364→   364→          </div>
+   365→   365→   365→        </section>
+   366→   366→   366→
+   367→   367→   367→        {/* Features Section */}
+   368→   368→   368→        <section className="px-6 py-16">
+   369→   369→   369→          <div className="max-w-5xl mx-auto">
+   370→   370→   370→            <motion.div
+   371→   371→   371→              initial={{ opacity: 0, y: 20 }}
+   372→   372→   372→              whileInView={{ opacity: 1, y: 0 }}
+   373→   373→   373→              viewport={{ once: true }}
+   374→   374→   374→              className="text-center mb-12"
+   375→   375→   375→            >
+   376→   376→   376→              <h2 className="text-3xl font-black mb-3">
+   377→   377→   377→                <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
+   378→   378→   378→                  Arena Features
+   379→   379→   379→                </span>
+   380→   380→   380→              </h2>
+   381→   381→   381→              <p className="text-muted-foreground">Everything you need, powered by AI</p>
+   382→   382→   382→            </motion.div>
+   383→   383→   383→
+   384→   384→   384→            <motion.div
+   385→   385→   385→              className="grid grid-cols-1 md:grid-cols-2 gap-5"
+   386→   386→   386→              initial="initial"
+   387→   387→   387→              whileInView="animate"
+   388→   388→   388→              viewport={{ once: true, margin: '-50px' }}
+   389→   389→   389→              variants={staggerContainer}
+   390→   390→   390→            >
+   391→   391→   391→              {features.map((feat, i) => (
+   392→   392→   392→                <motion.div
+   393→   393→   393→                  key={i}
+   394→   394→   394→                  variants={staggerItem}
+   395→   395→   395→                  whileHover={{ y: -6, scale: 1.01 }}
+   396→   396→   396→                  whileTap={{ scale: 0.99 }}
+   397→   397→   397→                  onClick={() => onNavigate(feat.action)}
+   398→   398→   398→                  className={`group cursor-pointer relative p-6 rounded-2xl border border-border/20 bg-muted/5 backdrop-blur-sm overflow-hidden transition-all hover:border-emerald-500/30 hover:shadow-xl ${feat.shadow}`}
+   399→   399→   399→                >
+   400→   400→   400→                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+   401→   401→   401→                  <div className="relative z-10 flex items-start gap-4">
+   402→   402→   402→                    <div className={`shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${feat.color} flex items-center justify-center text-white shadow-lg ${feat.shadow}`}>
+   403→   403→   403→                      {feat.icon}
+   404→   404→   404→                    </div>
+   405→   405→   405→                    <div>
+   406→   406→   406→                      <h3 className="text-lg font-bold mb-1">{feat.title}</h3>
+   407→   407→   407→                      <p className="text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
+   408→   408→   408→                    </div>
+   409→   409→   409→                  </div>
+   410→   410→   410→                  <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/20 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+   411→   411→   411→                </motion.div>
+   412→   412→   412→              ))}
+   413→   413→   413→            </motion.div>
+   414→   414→   414→          </div>
+   415→   415→   415→        </section>
+   416→   416→   416→
+   417→   417→   417→        {/* Leaderboard Section */}
+   418→   418→   418→        <section className="px-6 py-16 border-t border-border/20">
+   419→   419→   419→          <div className="max-w-5xl mx-auto">
+   420→   420→   420→            <motion.div
+   421→   421→   421→              initial={{ opacity: 0, y: 20 }}
+   422→   422→   422→              whileInView={{ opacity: 1, y: 0 }}
+   423→   423→   423→              viewport={{ once: true }}
+   424→   424→   424→              className="text-center mb-10"
+   425→   425→   425→            >
+   426→   426→   426→              <h2 className="text-3xl font-black mb-3">
+   427→   427→   427→                <span className="bg-gradient-to-r from-amber-500 to-orange-400 bg-clip-text text-transparent">
+   428→   428→   428→                  Arena Leaderboard
+   429→   429→   429→                </span>
+   430→   430→   430→              </h2>
+   431→   431→   431→              <p className="text-muted-foreground">Top performing AI models ranked by users</p>
+   432→   432→   432→            </motion.div>
+   433→   433→   433→
+   434→   434→   434→            <motion.div
+   435→   435→   435→              initial="initial"
+   436→   436→   436→              whileInView="animate"
+   437→   437→   437→              viewport={{ once: true }}
+   438→   438→   438→              variants={staggerContainer}
+   439→   439→   439→              className="max-w-lg mx-auto space-y-3"
+   440→   440→   440→            >
+   441→   441→   441→              {leaderboard.map((entry, i) => (
+   442→   442→   442→                <motion.div
+   443→   443→   443→                  key={i}
+   444→   444→   444→                  variants={staggerItem}
+   445→   445→   445→                  whileHover={{ x: 4, scale: 1.01 }}
+   446→   446→   446→                  className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+   447→   447→   447→                    entry.rank === 1
+   448→   448→   448→                      ? 'border-amber-500/30 bg-amber-500/5 shadow-lg shadow-amber-500/10'
+   449→   449→   449→                      : 'border-border/20 bg-muted/5'
+   450→   450→   450→                  }`}
+   451→   451→   451→                >
+   452→   452→   452→                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg ${
+   453→   453→   453→                    entry.rank === 1 ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white' :
+   454→   454→   454→                    entry.rank === 2 ? 'bg-gradient-to-br from-gray-400 to-gray-500 text-white' :
+   455→   455→   455→                    'bg-gradient-to-br from-amber-700 to-amber-800 text-white'
+   456→   456→   456→                  }`}>
+   457→   457→   457→                    #{entry.rank}
+   458→   458→   458→                  </div>
+   459→   459→   459→                  <div className="flex-1">
+   460→   460→   460→                    <div className="flex items-center gap-2 font-bold">
+   461→   461→   461→                      {entry.name}
+   462→   462→   462→                      {entry.badge}
+   463→   463→   463→                    </div>
+   464→   464→   464→                    <div className="text-xs text-muted-foreground">Arena Score</div>
+   465→   465→   465→                  </div>
+   466→   466→   466→                  <div className="text-right">
+   467→   467→   467→                    <div className="text-lg font-black text-emerald-500">{entry.score.toLocaleString()}</div>
+   468→   468→   468→                    <div className="flex items-center gap-1 text-xs text-emerald-500">
+   469→   469→   469→                      <TrendingUp className="h-3 w-3" />
+   470→   470→   470→                      +12
+   471→   471→   471→                    </div>
+   472→   472→   472→                  </div>
+   473→   473→   473→                </motion.div>
+   474→   474→   474→              ))}
+   475→   475→   475→            </motion.div>
+   476→   476→   476→          </div>
+   477→   477→   477→        </section>
+   478→   478→   478→
+   479→   479→   479→        {/* CTA Section */}
+   480→   480→   480→        <section className="px-6 py-20">
+   481→   481→   481→          <motion.div
+   482→   482→   482→            initial={{ opacity: 0, scale: 0.95 }}
+   483→   483→   483→            whileInView={{ opacity: 1, scale: 1 }}
+   484→   484→   484→            viewport={{ once: true }}
+   485→   485→   485→            className="max-w-2xl mx-auto text-center relative"
+   486→   486→   486→          >
+   487→   487→   487→            <FloatingParticles count={8} />
+   488→   488→   488→            <div className="relative z-10">
+   489→   489→   489→              <motion.div
+   490→   490→   490→                animate={{ rotate: [0, 5, -5, 0] }}
+   491→   491→   491→                transition={{ duration: 4, repeat: Infinity }}
+   492→   492→   492→                className="w-16 h-16 mx-auto mb-6"
+   493→   493→   493→              >
+   494→   494→   494→                <Flame className="h-16 w-16 text-orange-500" />
+   495→   495→   495→              </motion.div>
+   496→   496→   496→              <h2 className="text-3xl font-black mb-4">Ready to Enter the Arena?</h2>
+   497→   497→   497→              <p className="text-muted-foreground mb-8">Start chatting with AI or build your dream website in seconds.</p>
+   498→   498→   498→              <div className="flex flex-wrap justify-center gap-4">
+   499→   499→   499→                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   500→   500→   500→                  <Button onClick={() => onNavigate('chat')} className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/30 px-8 py-6 text-base font-semibold">
+   501→   501→   501→                    <Swords className="h-5 w-5" />
+   502→   502→   502→                    Start Chatting
+   503→   503→   503→                  </Button>
+   504→   504→   504→                </motion.div>
+   505→   505→   505→                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   506→   506→   506→                  <Button onClick={() => onNavigate('website')} variant="outline" className="gap-2 border-emerald-500/30 hover:bg-emerald-500/10 px-8 py-6 text-base">
+   507→   507→   507→                    <Globe className="h-5 w-5" />
+   508→   508→   508→                    Create Website
+   509→   509→   509→                  </Button>
+   510→   510→   510→                </motion.div>
+   511→   511→   511→              </div>
+   512→   512→   512→            </div>
+   513→   513→   513→          </motion.div>
+   514→   514→   514→        </section>
+   515→   515→   515→
+   516→   516→   516→        {/* Footer */}
+   517→   517→   517→        <footer className="px-6 py-6 border-t border-border/20 text-center">
+   518→   518→   518→          <p className="text-xs text-muted-foreground">
+   519→   519→   519→            Web_Trex_ Arena &middot; Powered by AI &middot; Built with Next.js
+   520→   520→   520→          </p>
+   521→   521→   521→        </footer>
+   522→   522→   522→      </div>
+   523→   523→   523→    </ScrollArea>
+   524→   524→   524→  );
+   525→   525→   525→}
+   526→   526→   526→
+   527→   527→   527→// ==================== CHAT SECTION ====================
+   528→   528→   528→function ChatSection() {
+   529→   529→   529→  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+   530→   530→   530→  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+   531→   531→   531→  const [input, setInput] = useState('');
+   532→   532→   532→  const [isLoading, setIsLoading] = useState(false);
+   533→   533→   533→  const messagesEndRef = useRef<HTMLDivElement>(null);
+   534→   534→   534→  const scrollRef = useRef<HTMLDivElement>(null);
+   535→   535→   535→
+   536→   536→   536→  const activeConv = conversations.find((c) => c.id === activeConvId);
+   537→   537→   537→
+   538→   538→   538→  useEffect(() => {
+   539→   539→   539→    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+   540→   540→   540→  }, [activeConv?.messages]);
+   541→   541→   541→
+   542→   542→   542→  const createNewChat = () => {
+   543→   543→   543→    const newConv: ChatConversation = {
+   544→   544→   544→      id: Date.now().toString(),
+   545→   545→   545→      title: 'New Chat',
+   546→   546→   546→      messages: [],
+   547→   547→   547→      createdAt: new Date(),
+   548→   548→   548→    };
+   549→   549→   549→    setConversations((prev) => [newConv, ...prev]);
+   550→   550→   550→    setActiveConvId(newConv.id);
+   551→   551→   551→  };
+   552→   552→   552→
+   553→   553→   553→  const deleteConversation = (id: string) => {
+   554→   554→   554→    setConversations((prev) => prev.filter((c) => c.id !== id));
+   555→   555→   555→    if (activeConvId === id) setActiveConvId(null);
+   556→   556→   556→  };
+   557→   557→   557→
+   558→   558→   558→  const sendMessage = async () => {
+   559→   559→   559→    if (!input.trim() || isLoading) return;
+   560→   560→   560→
+   561→   561→   561→    let convId = activeConvId;
+   562→   562→   562→
+   563→   563→   563→    if (!convId) {
+   564→   564→   564→      const newConv: ChatConversation = {
+   565→   565→   565→        id: Date.now().toString(),
+   566→   566→   566→        title: input.slice(0, 40) + (input.length > 40 ? '...' : ''),
+   567→   567→   567→        messages: [],
+   568→   568→   568→        createdAt: new Date(),
+   569→   569→   569→      };
+   570→   570→   570→      setConversations((prev) => [newConv, ...prev]);
+   571→   571→   571→      convId = newConv.id;
+   572→   572→   572→      setActiveConvId(convId);
+   573→   573→   573→    }
+   574→   574→   574→
+   575→   575→   575→    const userMessage: Message = {
+   576→   576→   576→      id: Date.now().toString(),
+   577→   577→   577→      role: 'user',
+   578→   578→   578→      content: input,
+   579→   579→   579→      timestamp: new Date(),
+   580→   580→   580→    };
+   581→   581→   581→
+   582→   582→   582→    setConversations((prev) =>
+   583→   583→   583→      prev.map((c) =>
+   584→   584→   584→        c.id === convId
+   585→   585→   585→          ? { ...c, messages: [...c.messages, userMessage], title: c.messages.length === 0 ? input.slice(0, 40) + (input.length > 40 ? '...' : '') : c.title }
+   586→   586→   586→          : c
+   587→   587→   587→      )
+   588→   588→   588→    );
+   589→   589→   589→
+   590→   590→   590→    setInput('');
+   591→   591→   591→    setIsLoading(true);
+   592→   592→   592→
+   593→   593→   593→    try {
+   594→   594→   594→      const currentConv = conversations.find((c) => c.id === convId);
+   595→   595→   595→      const chatHistory = [
+   596→   596→   596→        ...(currentConv?.messages || []).map((m) => ({ role: m.role, content: m.content })),
+   597→   597→   597→        { role: 'user' as const, content: input },
+   598→   598→   598→      ];
+   599→   599→   599→
+   600→   600→   600→      const res = await fetch('/api/chat', {
+   601→   601→   601→        method: 'POST',
+   602→   602→   602→        headers: { 'Content-Type': 'application/json' },
+   603→   603→   603→        body: JSON.stringify({ messages: chatHistory }),
+   604→   604→   604→      });
+   605→   605→   605→
+   606→   606→   606→      const data = await res.json();
+   607→   607→   607→
+   608→   608→   608→      const aiMessage: Message = {
+   609→   609→   609→        id: (Date.now() + 1).toString(),
+   610→   610→   610→        role: 'assistant',
+   611→   611→   611→        content: data.reply || data.error || 'Something went wrong.',
+   612→   612→   612→        timestamp: new Date(),
+   613→   613→   613→      };
+   614→   614→   614→
+   615→   615→   615→      setConversations((prev) =>
+   616→   616→   616→        prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, aiMessage] } : c))
+   617→   617→   617→      );
+   618→   618→   618→    } catch {
+   619→   619→   619→      const errorMessage: Message = {
+   620→   620→   620→        id: (Date.now() + 1).toString(),
+   621→   621→   621→        role: 'assistant',
+   622→   622→   622→        content: 'Sorry, there was an error connecting to the AI. Please try again.',
+   623→   623→   623→        timestamp: new Date(),
+   624→   624→   624→      };
+   625→   625→   625→      setConversations((prev) =>
+   626→   626→   626→        prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, errorMessage] } : c))
+   627→   627→   627→      );
+   628→   628→   628→    } finally {
+   629→   629→   629→      setIsLoading(false);
+   630→   630→   630→    }
+   631→   631→   631→  };
+   632→   632→   632→
+   633→   633→   633→  return (
+   634→   634→   634→    <div className="flex h-full">
+   635→   635→   635→      {/* Chat History Sidebar */}
+   636→   636→   636→      <div className="w-64 border-r border-border/30 bg-muted/10 backdrop-blur-sm flex flex-col shrink-0">
+   637→   637→   637→        <div className="p-3">
+   638→   638→   638→          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+   639→   639→   639→            <Button onClick={createNewChat} className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20">
+   640→   640→   640→              <Sparkles className="h-4 w-4" />
+   641→   641→   641→              New Chat
+   642→   642→   642→            </Button>
+   643→   643→   643→          </motion.div>
+   644→   644→   644→        </div>
+   645→   645→   645→        <ScrollArea className="flex-1 px-2">
+   646→   646→   646→          <motion.div className="space-y-1" variants={staggerContainer} initial="initial" animate="animate">
+   647→   647→   647→            {conversations.map((conv) => (
+   648→   648→   648→              <motion.div
+   649→   649→   649→                key={conv.id}
+   650→   650→   650→                variants={staggerItem}
+   651→   651→   651→                whileHover={{ x: 2 }}
+   652→   652→   652→                className={`group flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer transition-all text-sm ${
+   653→   653→   653→                  activeConvId === conv.id
+   654→   654→   654→                    ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20'
+   655→   655→   655→                    : 'hover:bg-muted/30 border border-transparent'
+   656→   656→   656→                }`}
+   657→   657→   657→                onClick={() => setActiveConvId(conv.id)}
+   658→   658→   658→              >
+   659→   659→   659→                <MessageSquare className="h-4 w-4 shrink-0 text-emerald-500" />
+   660→   660→   660→                <span className="truncate flex-1">{conv.title}</span>
+   661→   661→   661→                <button
+   662→   662→   662→                  onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+   663→   663→   663→                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 hover:text-destructive"
+   664→   664→   664→                >
+   665→   665→   665→                  <Trash2 className="h-3.5 w-3.5" />
+   666→   666→   666→                </button>
+   667→   667→   667→              </motion.div>
+   668→   668→   668→            ))}
+   669→   669→   669→          </motion.div>
+   670→   670→   670→        </ScrollArea>
+   671→   671→   671→      </div>
+   672→   672→   672→
+   673→   673→   673→      {/* Main Chat Area */}
+   674→   674→   674→      <div className="flex-1 flex flex-col min-w-0 relative">
+   675→   675→   675→        {activeConv ? (
+   676→   676→   676→          <>
+   677→   677→   677→            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+   678→   678→   678→              <div className="max-w-3xl mx-auto space-y-4">
+   679→   679→   679→                {activeConv.messages.map((msg) => (
+   680→   680→   680→                  <motion.div
+   681→   681→   681→                    key={msg.id}
+   682→   682→   682→                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+   683→   683→   683→                    animate={{ opacity: 1, y: 0, scale: 1 }}
+   684→   684→   684→                    transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+   685→   685→   685→                    className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+   686→   686→   686→                  >
+   687→   687→   687→                    {msg.role === 'assistant' && (
+   688→   688→   688→                      <motion.div
+   689→   689→   689→                        initial={{ scale: 0 }}
+   690→   690→   690→                        animate={{ scale: 1 }}
+   691→   691→   691→                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+   692→   692→   692→                        className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20"
+   693→   693→   693→                      >
+   694→   694→   694→                        <Bot className="h-4 w-4" />
+   695→   695→   695→                      </motion.div>
+   696→   696→   696→                    )}
+   697→   697→   697→                    <motion.div
+   698→   698→   698→                      initial={{ scale: 0.9 }}
+   699→   699→   699→                      animate={{ scale: 1 }}
+   700→   700→   700→                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+   701→   701→   701→                      className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+   702→   702→   702→                        msg.role === 'user'
+   703→   703→   703→                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
+   704→   704→   704→                          : 'bg-muted/80 backdrop-blur-sm border border-border/30'
+   705→   705→   705→                      }`}
+   706→   706→   706→                    >
+   707→   707→   707→                      {msg.role === 'assistant' ? (
+   708→   708→   708→                        <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+   709→   709→   709→                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+   710→   710→   710→                        </div>
+   711→   711→   711→                      ) : (
+   712→   712→   712→                        <p className="whitespace-pre-wrap">{msg.content}</p>
+   713→   713→   713→                      )}
+   714→   714→   714→                    </motion.div>
+   715→   715→   715→                    {msg.role === 'user' && (
+   716→   716→   716→                      <motion.div
+   717→   717→   717→                        initial={{ scale: 0 }}
+   718→   718→   718→                        animate={{ scale: 1 }}
+   719→   719→   719→                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+   720→   720→   720→                        className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20"
+   721→   721→   721→                      >
+   722→   722→   722→                        <User className="h-4 w-4" />
+   723→   723→   723→                      </motion.div>
+   724→   724→   724→                    )}
+   725→   725→   725→                  </motion.div>
+   726→   726→   726→                ))}
+   727→   727→   727→                {isLoading && (
+   728→   728→   728→                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3 justify-start">
+   729→   729→   729→                    <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+   730→   730→   730→                      <Bot className="h-4 w-4" />
+   731→   731→   731→                    </div>
+   732→   732→   732→                    <div className="bg-muted/80 backdrop-blur-sm border border-border/30 rounded-2xl px-5 py-3">
+   733→   733→   733→                      <div className="flex gap-2">
+   734→   734→   734→                        {[0, 1, 2].map((i) => (
+   735→   735→   735→                          <motion.div key={i} className="w-2 h-2 rounded-full bg-emerald-500"
+   736→   736→   736→                            animate={{ y: [0, -8, 0], opacity: [0.5, 1, 0.5] }}
+   737→   737→   737→                            transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
+   738→   738→   738→                          />
+   739→   739→   739→                        ))}
+   740→   740→   740→                      </div>
+   741→   741→   741→                    </div>
+   742→   742→   742→                  </motion.div>
+   743→   743→   743→                )}
+   744→   744→   744→                <div ref={messagesEndRef} />
+   745→   745→   745→              </div>
+   746→   746→   746→            </ScrollArea>
+   747→   747→   747→
+   748→   748→   748→            <ScrollToBottom scrollRef={scrollRef} />
+   749→   749→   749→
+   750→   750→   750→            {/* Input */}
+   751→   751→   751→            <div className="border-t border-border/30 p-4 bg-background/80 backdrop-blur-lg">
+   752→   752→   752→              <div className="max-w-3xl mx-auto flex gap-3 items-end">
+   753→   753→   753→                <Textarea
+   754→   754→   754→                  value={input}
+   755→   755→   755→                  onChange={(e) => setInput(e.target.value)}
+   756→   756→   756→                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+   757→   757→   757→                  placeholder="Ask me anything... (Press Enter to send)"
+   758→   758→   758→                  className="resize-none min-h-[48px] max-h-[200px] border-emerald-500/20 focus:border-emerald-500/50 transition-colors"
+   759→   759→   759→                  rows={1}
+   760→   760→   760→                />
+   761→   761→   761→                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   762→   762→   762→                  <Button onClick={sendMessage} disabled={!input.trim() || isLoading} size="icon"
+   763→   763→   763→                    className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all">
+   764→   764→   764→                    <Send className="h-5 w-5" />
+   765→   765→   765→                  </Button>
+   766→   766→   766→                </motion.div>
+   767→   767→   767→              </div>
+   768→   768→   768→            </div>
+   769→   769→   769→          </>
+   770→   770→   770→        ) : (
+   771→   771→   771→          /* Welcome Screen */
+   772→   772→   772→          <div className="flex-1 flex items-center justify-center p-8 relative">
+   773→   773→   773→            <FloatingParticles />
+   774→   774→   774→            <motion.div className="text-center max-w-lg relative z-10" initial="initial" animate="animate" variants={staggerContainer}>
+   775→   775→   775→              <motion.div variants={scaleIn} className="relative w-24 h-24 mx-auto mb-8">
+   776→   776→   776→                <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+   777→   777→   777→                  className="absolute inset-0 rounded-2xl border-2 border-dashed border-emerald-500/30" />
+   778→   778→   778→                <div className="absolute inset-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl shadow-emerald-500/30">
+   779→   779→   779→                  <Swords className="h-10 w-10 text-white" />
+   780→   780→   780→                </div>
+   781→   781→   781→                <motion.div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400"
+   782→   782→   782→                  animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 2, repeat: Infinity }} />
+   783→   783→   783→              </motion.div>
+   784→   784→   784→
+   785→   785→   785→              <motion.h2 variants={fadeInUp} className="text-3xl font-bold mb-3">
+   786→   786→   786→                <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">Chat with Web_Trex_</span>
+   787→   787→   787→              </motion.h2>
+   788→   788→   788→
+   789→   789→   789→              <motion.p variants={fadeInUp} className="text-muted-foreground mb-8">
+   790→   790→   790→                Your AI-powered arena for answers, code, and creativity.
+   791→   791→   791→              </motion.p>
+   792→   792→   792→
+   793→   793→   793→              <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3 text-sm mb-8">
+   794→   794→   794→                {[
+   795→   795→   795→                  { icon: <Code className="h-5 w-5" />, text: 'Coding Help', color: 'from-blue-500 to-cyan-500' },
+   796→   796→   796→                  { icon: <Brain className="h-5 w-5" />, text: 'Explain Topics', color: 'from-purple-500 to-pink-500' },
+   797→   797→   797→                  { icon: <Palette className="h-5 w-5" />, text: 'Creative Ideas', color: 'from-orange-500 to-amber-500' },
+   798→   798→   798→                  { icon: <Zap className="h-5 w-5" />, text: 'Quick Answers', color: 'from-emerald-500 to-teal-500' },
+   799→   799→   799→                ].map((item, i) => (
+   800→   800→   800→                  <motion.button key={i} variants={staggerItem} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+   801→   801→   801→                    onClick={() => { setInput(item.text); createNewChat(); }}
+   802→   802→   802→                    className="flex items-center gap-3 p-4 rounded-xl border border-border/30 bg-background/50 backdrop-blur-sm hover:bg-muted/50 transition-all text-left shadow-md">
+   803→   803→   803→                    <div className={`shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-white`}>
+   804→   804→   804→                      {item.icon}
+   805→   805→   805→                    </div>
+   806→   806→   806→                    <span className="font-medium">{item.text}</span>
+   807→   807→   807→                  </motion.button>
+   808→   808→   808→                ))}
+   809→   809→   809→              </motion.div>
+   810→   810→   810→
+   811→   811→   811→              <motion.div variants={fadeInUp}>
+   812→   812→   812→                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+   813→   813→   813→                  <Button onClick={createNewChat} className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 px-8 py-6 text-base">
+   814→   814→   814→                    <Rocket className="h-5 w-5" />
+   815→   815→   815→                    Start New Chat
+   816→   816→   816→                  </Button>
+   817→   817→   817→                </motion.div>
+   818→   818→   818→              </motion.div>
+   819→   819→   819→            </motion.div>
+   820→   820→   820→          </div>
+   821→   821→   821→        )}
+   822→   822→   822→      </div>
+   823→   823→   823→    </div>
+   824→   824→   824→  );
+   825→   825→   825→}
+   826→   826→   826→
+   827→   827→   827→// ==================== WEBSITE CREATOR SECTION ====================
+   828→   828→   828→function WebsiteCreatorSection() {
+   829→   829→   829→  const [description, setDescription] = useState('');
+   830→   830→   830→  const [generatedHtml, setGeneratedHtml] = useState('');
+   831→   831→   831→  const [isGenerating, setIsGenerating] = useState(false);
+   832→   832→   832→  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
+   833→   833→   833→  const [copied, setCopied] = useState(false);
+   834→   834→   834→  const [loadingStep, setLoadingStep] = useState(0);
+   835→   835→   835→  const [errorMsg, setErrorMsg] = useState('');
+   836→   836→   836→
+   837→   837→   837→  const loadingSteps = [
+   838→   838→   838→    'Understanding your requirements...',
+   839→   839→   839→    'Designing the layout...',
+   840→   840→   840→    'Adding styles and animations...',
+   841→   841→   841→    'Generating final code...',
+   842→   842→   842→  ];
+   843→   843→   843→
+   844→   844→   844→  const generateWebsite = async () => {
+   845→   845→   845→    if (!description.trim() || isGenerating) return;
+   846→   846→   846→    setIsGenerating(true);
+   847→   847→   847→    setGeneratedHtml('');
+   848→   848→   848→    setErrorMsg('');
+   849→   849→   849→    setLoadingStep(0);
+   850→   850→   850→
+   851→   851→   851→    const stepInterval = setInterval(() => {
+   852→   852→   852→      setLoadingStep((prev) => (prev < loadingSteps.length - 1 ? prev + 1 : prev));
+   853→   853→   853→    }, 8000);
+   854→   854→   854→
+   855→   855→   855→    try {
+   856→   856→   856→      const res = await fetch('/api/generate-website', {
+   857→   857→   857→        method: 'POST',
+   858→   858→   858→        headers: { 'Content-Type': 'application/json' },
+   859→   859→   859→        body: JSON.stringify({ description }),
+   860→   860→   860→      });
+   861→   861→   861→      clearInterval(stepInterval);
+   862→   862→   862→      const data = await res.json();
+   863→   863→   863→      if (data.html) {
+   864→   864→   864→        setGeneratedHtml(data.html);
+   865→   865→   865→        setActiveTab('preview');
+   866→   866→   866→      } else {
+   867→   867→   867→        setErrorMsg(data.error || 'Failed to generate. Please try again.');
+   868→   868→   868→      }
+   869→   869→   869→    } catch {
+   870→   870→   870→      clearInterval(stepInterval);
+   871→   871→   871→      setErrorMsg('Failed to connect to server. Please check your connection.');
+   872→   872→   872→    } finally {
+   873→   873→   873→      setIsGenerating(false);
+   874→   874→   874→    }
+   875→   875→   875→  };
+   876→   876→   876→
+   877→   877→   877→  const copyCode = async () => {
+   878→   878→   878→    await navigator.clipboard.writeText(generatedHtml);
+   879→   879→   879→    setCopied(true);
+   880→   880→   880→    setTimeout(() => setCopied(false), 2000);
+   881→   881→   881→  };
+   882→   882→   882→
+   883→   883→   883→  const downloadHtml = () => {
+   884→   884→   884→    const blob = new Blob([generatedHtml], { type: 'text/html' });
+   885→   885→   885→    const url = URL.createObjectURL(blob);
+   886→   886→   886→    const a = document.createElement('a');
+   887→   887→   887→    a.href = url;
+   888→   888→   888→    a.download = 'website.html';
+   889→   889→   889→    a.click();
+   890→   890→   890→    URL.revokeObjectURL(url);
+   891→   891→   891→  };
+   892→   892→   892→
+   893→   893→   893→  const templates = [
+   894→   894→   894→    { name: 'Portfolio', desc: 'A personal portfolio website showcasing projects and skills', icon: <User className="h-5 w-5" />, color: 'from-blue-500 to-cyan-500' },
+   895→   895→   895→    { name: 'Business', desc: 'A professional business website with services and contact', icon: <Globe className="h-5 w-5" />, color: 'from-emerald-500 to-teal-500' },
+   896→   896→   896→    { name: 'Restaurant', desc: 'A restaurant website with food menu and reservations', icon: <Palette className="h-5 w-5" />, color: 'from-orange-500 to-amber-500' },
+   897→   897→   897→    { name: 'Landing Page', desc: 'A product landing page with features and pricing', icon: <Zap className="h-5 w-5" />, color: 'from-purple-500 to-pink-500' },
+   898→   898→   898→    { name: 'Blog', desc: 'A clean personal blog website with article listings', icon: <Code className="h-5 w-5" />, color: 'from-rose-500 to-red-500' },
+   899→   899→   899→    { name: 'E-Commerce', desc: 'An online shop storefront with product cards and cart', icon: <Sparkles className="h-5 w-5" />, color: 'from-teal-500 to-emerald-500' },
+   900→   900→   900→  ];
+   901→   901→   901→
+   902→   902→   902→  return (
+   903→   903→   903→    <div className="flex flex-col h-full">
+   904→   904→   904→      {/* Top Input Area */}
+   905→   905→   905→      <div className="border-b border-border/30 p-4 bg-muted/10 backdrop-blur-sm">
+   906→   906→   906→        <div className="max-w-4xl mx-auto">
+   907→   907→   907→          <motion.h2 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+   908→   908→   908→            className="text-lg font-semibold mb-3 flex items-center gap-2">
+   909→   909→   909→            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+   910→   910→   910→              <Globe className="h-4 w-4 text-white" />
+   911→   911→   911→            </div>
+   912→   912→   912→            Website Creator
+   913→   913→   913→          </motion.h2>
+   914→   914→   914→          <div className="flex gap-2">
+   915→   915→   915→            <Input value={description} onChange={(e) => setDescription(e.target.value)}
+   916→   916→   916→              onKeyDown={(e) => { if (e.key === 'Enter') generateWebsite(); }}
+   917→   917→   917→              placeholder="Describe the website you want to create... (e.g., 'A modern coffee shop website with menu and contact page')"
+   918→   918→   918→              className="flex-1 border-emerald-500/20 focus:border-emerald-500/50 transition-colors" />
+   919→   919→   919→            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+   920→   920→   920→              <Button onClick={generateWebsite} disabled={!description.trim() || isGenerating}
+   921→   921→   921→                className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
+   922→   922→   922→                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+   923→   923→   923→                Generate
+   924→   924→   924→              </Button>
+   925→   925→   925→            </motion.div>
+   926→   926→   926→          </div>
+   927→   927→   927→
+   928→   928→   928→          {/* Template Quick Picks */}
+   929→   929→   929→          <motion.div className="mt-3 flex gap-2 flex-wrap" variants={staggerContainer} initial="initial" animate="animate">
+   930→   930→   930→            {templates.map((t, i) => (
+   931→   931→   931→              <motion.button key={i} variants={staggerItem} whileHover={{ scale: 1.05, y: -1 }} whileTap={{ scale: 0.95 }}
+   932→   932→   932→                onClick={() => setDescription(t.desc)}
+   933→   933→   933→                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border/30 bg-background/50 backdrop-blur-sm hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-600 transition-all shadow-sm">
+   934→   934→   934→                {t.icon} {t.name}
+   935→   935→   935→              </motion.button>
+   936→   936→   936→            ))}
+   937→   937→   937→          </motion.div>
+   938→   938→   938→        </div>
+   939→   939→   939→      </div>
+   940→   940→   940→
+   941→   941→   941→      {/* Result Area */}
+   942→   942→   942→      <div className="flex-1 min-h-0">
+   943→   943→   943→        {generatedHtml ? (
+   944→   944→   944→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="h-full">
+   945→   945→   945→            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'code' | 'preview')} className="h-full flex flex-col">
+   946→   946→   946→              <div className="flex items-center justify-between px-4 py-2 border-b border-border/30 bg-muted/20 backdrop-blur-sm">
+   947→   947→   947→                <TabsList>
+   948→   948→   948→                  <TabsTrigger value="preview" className="gap-1.5"><Eye className="h-3.5 w-3.5" />Preview</TabsTrigger>
+   949→   949→   949→                  <TabsTrigger value="code" className="gap-1.5"><Code className="h-3.5 w-3.5" />Code</TabsTrigger>
+   950→   950→   950→                </TabsList>
+   951→   951→   951→                <div className="flex gap-2">
+   952→   952→   952→                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   953→   953→   953→                    <Button variant="outline" size="sm" onClick={copyCode} className="gap-1.5">
+   954→   954→   954→                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+   955→   955→   955→                      {copied ? 'Copied!' : 'Copy Code'}
+   956→   956→   956→                    </Button>
+   957→   957→   957→                  </motion.div>
+   958→   958→   958→                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   959→   959→   959→                    <Button variant="outline" size="sm" onClick={downloadHtml} className="gap-1.5">
+   960→   960→   960→                      <Download className="h-3.5 w-3.5" />Download
+   961→   961→   961→                    </Button>
+   962→   962→   962→                  </motion.div>
+   963→   963→   963→                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+   964→   964→   964→                    <Button variant="outline" size="sm" onClick={generateWebsite} disabled={isGenerating} className="gap-1.5">
+   965→   965→   965→                      <RotateCcw className="h-3.5 w-3.5" />Regenerate
+   966→   966→   966→                    </Button>
+   967→   967→   967→                  </motion.div>
+   968→   968→   968→                </div>
+   969→   969→   969→              </div>
+   970→   970→   970→              <TabsContent value="preview" className="flex-1 m-0 p-0">
+   971→   971→   971→                <iframe srcDoc={generatedHtml} className="w-full h-full border-0" title="Website Preview" sandbox="allow-scripts" />
+   972→   972→   972→              </TabsContent>
+   973→   973→   973→              <TabsContent value="code" className="flex-1 m-0 p-0 overflow-auto">
+   974→   974→   974→                <div className="h-full bg-zinc-950 text-green-400 p-4 overflow-auto">
+   975→   975→   975→                  <pre className="text-sm font-mono whitespace-pre-wrap break-words leading-relaxed">
+   976→   976→   976→                    <code>{generatedHtml}</code>
+   977→   977→   977→                  </pre>
+   978→   978→   978→                </div>
+   979→   979→   979→              </TabsContent>
+   980→   980→   980→            </Tabs>
+   981→   981→   981→          </motion.div>
+   982→   982→   982→        ) : isGenerating ? (
+   983→   983→   983→          <div className="h-full flex items-center justify-center">
+   984→   984→   984→            <motion.div className="text-center max-w-sm" initial="initial" animate="animate" variants={staggerContainer}>
+   985→   985→   985→              <motion.div variants={scaleIn} className="relative w-24 h-24 mx-auto mb-6">
+   986→   986→   986→                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+   987→   987→   987→                  className="absolute inset-0 rounded-full border-4 border-emerald-500/20 border-t-emerald-500" />
+   988→   988→   988→                <div className="absolute inset-0 flex items-center justify-center">
+   989→   989→   989→                  <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }} transition={{ duration: 3, repeat: Infinity }}>
+   990→   990→   990→                    <Sparkles className="h-8 w-8 text-emerald-500" />
+   991→   991→   991→                  </motion.div>
+   992→   992→   992→                </div>
+   993→   993→   993→              </motion.div>
+   994→   994→   994→              <motion.p variants={fadeInUp} className="text-lg font-semibold mb-2">Creating your website</motion.p>
+   995→   995→   995→              <motion.div variants={fadeInUp} className="space-y-2 mt-4">
+   996→   996→   996→                {loadingSteps.map((step, i) => (
+   997→   997→   997→                  <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.3 }}
+   998→   998→   998→                    className={`flex items-center gap-2 text-sm transition-all duration-500 ${
+   999→   999→   999→                      i <= loadingStep ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/40'
+  1000→  1000→  1000→                    }`}>
+  1001→  1001→  1001→                    {i < loadingStep ? <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check className="h-4 w-4 shrink-0" /></motion.div> :
+  1002→  1002→  1002→                     i === loadingStep ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> :
+  1003→  1003→  1003→                     <div className="h-4 w-4 shrink-0 rounded-full border border-current" />}
+  1004→  1004→  1004→                    <span>{step}</span>
+  1005→  1005→  1005→                  </motion.div>
+  1006→  1006→  1006→                ))}
+  1007→  1007→  1007→              </motion.div>
+  1008→  1008→  1008→              <motion.p variants={fadeInUp} className="text-muted-foreground text-xs mt-6">Usually takes 15-30 seconds</motion.p>
+  1009→  1009→  1009→            </motion.div>
+  1010→  1010→  1010→          </div>
+  1011→  1011→  1011→        ) : errorMsg ? (
+  1012→  1012→  1012→          <div className="h-full flex items-center justify-center p-8">
+  1013→  1013→  1013→            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-sm">
+  1014→  1014→  1014→              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+  1015→  1015→  1015→                <X className="h-8 w-8 text-destructive" />
+  1016→  1016→  1016→              </div>
+  1017→  1017→  1017→              <h3 className="text-lg font-bold mb-2">Generation Failed</h3>
+  1018→  1018→  1018→              <p className="text-muted-foreground mb-4 text-sm">{errorMsg}</p>
+  1019→  1019→  1019→              <Button onClick={generateWebsite} variant="outline" className="gap-2">
+  1020→  1020→  1020→                <RotateCcw className="h-4 w-4" />Try Again
+  1021→  1021→  1021→              </Button>
+  1022→  1022→  1022→            </motion.div>
+  1023→  1023→  1023→          </div>
+  1024→  1024→  1024→        ) : (
+  1025→  1025→  1025→          /* Empty State */
+  1026→  1026→  1026→          <div className="h-full flex items-center justify-center p-8 relative">
+  1027→  1027→  1027→            <FloatingParticles />
+  1028→  1028→  1028→            <motion.div className="text-center max-w-md relative z-10" initial="initial" animate="animate" variants={staggerContainer}>
+  1029→  1029→  1029→              <motion.div variants={scaleIn} className="relative w-24 h-24 mx-auto mb-6">
+  1030→  1030→  1030→                <motion.div animate={{ rotate: -360 }} transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+  1031→  1031→  1031→                  className="absolute inset-0 rounded-2xl border-2 border-dashed border-emerald-500/30" />
+  1032→  1032→  1032→                <div className="absolute inset-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl shadow-emerald-500/30">
+  1033→  1033→  1033→                  <Globe className="h-10 w-10 text-white" />
+  1034→  1034→  1034→                </div>
+  1035→  1035→  1035→              </motion.div>
+  1036→  1036→  1036→              <motion.h3 variants={fadeInUp} className="text-2xl font-bold mb-2">
+  1037→  1037→  1037→                <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">Create a Website</span>
+  1038→  1038→  1038→              </motion.h3>
+  1039→  1039→  1039→              <motion.p variants={fadeInUp} className="text-muted-foreground mb-6">
+  1040→  1040→  1040→                Type a description above and click <strong>Generate</strong> — or pick a template below!
+  1041→  1041→  1041→              </motion.p>
+  1042→  1042→  1042→              <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3 text-sm">
+  1043→  1043→  1043→                {templates.map((t, i) => (
+  1044→  1044→  1044→                  <motion.button key={i} variants={staggerItem} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+  1045→  1045→  1045→                    onClick={() => setDescription(t.desc)}
+  1046→  1046→  1046→                    className="flex items-center gap-3 p-3 rounded-xl border border-border/30 bg-background/50 backdrop-blur-sm hover:bg-muted/50 transition-all text-left shadow-sm">
+  1047→  1047→  1047→                    <div className={`shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br ${t.color} flex items-center justify-center text-white`}>
+  1048→  1048→  1048→                      {t.icon}
+  1049→  1049→  1049→                    </div>
+  1050→  1050→  1050→                    <div>
+  1051→  1051→  1051→                      <div className="font-medium">{t.name}</div>
+  1052→  1052→  1052→                      <div className="text-xs text-muted-foreground line-clamp-1">{t.desc}</div>
+  1053→  1053→  1053→                    </div>
+  1054→  1054→  1054→                  </motion.button>
+  1055→  1055→  1055→                ))}
+  1056→  1056→  1056→              </motion.div>
+  1057→  1057→  1057→            </motion.div>
+  1058→  1058→  1058→          </div>
+  1059→  1059→  1059→        )}
+  1060→  1060→  1060→      </div>
+  1061→  1061→  1061→    </div>
+  1062→  1062→  1062→  );
+  1063→  1063→  1063→}
+  1064→  1064→  1064→
+  1065→  1065→  1065→// ==================== MAIN APP ====================
+  1066→  1066→  1066→export default function Home() {
+  1067→  1067→  1067→  const [activeSection, setActiveSection] = useState<ActiveSection>('arena');
+  1068→  1068→  1068→  const [sidebarOpen, setSidebarOpen] = useState(true);
+  1069→  1069→  1069→  const [isDark, setIsDark] = useState(() => {
+  1070→  1070→  1070→    if (typeof window !== 'undefined') {
+  1071→  1071→  1071→      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  1072→  1072→  1072→    }
+  1073→  1073→  1073→    return false;
+  1074→  1074→  1074→  });
+  1075→  1075→  1075→
+  1076→  1076→  1076→  useEffect(() => {
+  1077→  1077→  1077→    document.documentElement.classList.toggle('dark', isDark);
+  1078→  1078→  1078→  }, [isDark]);
+  1079→  1079→  1079→
+  1080→  1080→  1080→  const toggleTheme = () => setIsDark((prev) => !prev);
+  1081→  1081→  1081→
+  1082→  1082→  1082→  const navItems = [
+  1083→  1083→  1083→    { id: 'arena' as ActiveSection, label: 'Arena Home', icon: HomeIcon, desc: 'Explore', badge: '' },
+  1084→  1084→  1084→    { id: 'chat' as ActiveSection, label: 'AI Chat', icon: MessageSquare, desc: 'Ask anything', badge: 'LIVE' },
+  1085→  1085→  1085→    { id: 'website' as ActiveSection, label: 'Website Creator', icon: Globe, desc: 'Build websites', badge: 'NEW' },
+  1086→  1086→  1086→  ];
+  1087→  1087→  1087→
+  1088→  1088→  1088→  return (
+  1089→  1089→  1089→    <div className="h-screen flex bg-background text-foreground overflow-hidden">
+  1090→  1090→  1090→      {/* Sidebar */}
+  1091→  1091→  1091→      <motion.aside
+  1092→  1092→  1092→        initial={false}
+  1093→  1093→  1093→        animate={{ width: sidebarOpen ? 260 : 0 }}
+  1094→  1094→  1094→        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+  1095→  1095→  1095→        className="border-r border-border/30 bg-muted/10 backdrop-blur-md overflow-hidden shrink-0 flex flex-col"
+  1096→  1096→  1096→      >
+  1097→  1097→  1097→        {sidebarOpen && (
+  1098→  1098→  1098→          <div className="w-[260px] flex flex-col h-full">
+  1099→  1099→  1099→            {/* Logo */}
+  1100→  1100→  1100→            <div className="p-5 border-b border-border/20">
+  1101→  1101→  1101→              <motion.div className="flex items-center gap-3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+  1102→  1102→  1102→                transition={{ type: 'spring', stiffness: 200, damping: 20 }}>
+  1103→  1103→  1103→                <motion.div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30"
+  1104→  1104→  1104→                  whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.95 }}>
+  1105→  1105→  1105→                  <Swords className="h-5 w-5 text-white" />
+  1106→  1106→  1106→                  <motion.div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400"
+  1107→  1107→  1107→                    animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 2, repeat: Infinity }} />
+  1108→  1108→  1108→                </motion.div>
+  1109→  1109→  1109→                <div>
+  1110→  1110→  1110→                  <h1 className="font-bold text-lg leading-tight bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
+  1111→  1111→  1111→                    Web_Trex_
+  1112→  1112→  1112→                  </h1>
+  1113→  1113→  1113→                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">AI Arena</p>
+  1114→  1114→  1114→                </div>
+  1115→  1115→  1115→              </motion.div>
+  1116→  1116→  1116→            </div>
+  1117→  1117→  1117→
+  1118→  1118→  1118→            {/* Nav Items */}
+  1119→  1119→  1119→            <nav className="flex-1 p-3 space-y-2">
+  1120→  1120→  1120→              {navItems.map((item, idx) => (
+  1121→  1121→  1121→                <motion.button key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+  1122→  1122→  1122→                  transition={{ delay: idx * 0.1 }} onClick={() => setActiveSection(item.id)}
+  1123→  1123→  1123→                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left group relative overflow-hidden ${
+  1124→  1124→  1124→                    activeSection === item.id
+  1125→  1125→  1125→                      ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 shadow-md shadow-emerald-500/10'
+  1126→  1126→  1126→                      : 'hover:bg-muted/30 border border-transparent'
+  1127→  1127→  1127→                  }`}>
+  1128→  1128→  1128→                  {activeSection === item.id && (
+  1129→  1129→  1129→                    <motion.div layoutId="activeNav"
+  1130→  1130→  1130→                      className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-r-full"
+  1131→  1131→  1131→                      transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
+  1132→  1132→  1132→                  )}
+  1133→  1133→  1133→                  <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+  1134→  1134→  1134→                    activeSection === item.id
+  1135→  1135→  1135→                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
+  1136→  1136→  1136→                      : 'bg-muted/50 text-muted-foreground group-hover:text-foreground'
+  1137→  1137→  1137→                  }`}>
+  1138→  1138→  1138→                    <item.icon className="h-4 w-4" />
+  1139→  1139→  1139→                  </div>
+  1140→  1140→  1140→                  <div className="flex-1 min-w-0">
+  1141→  1141→  1141→                    <div className="font-medium text-sm">{item.label}</div>
+  1142→  1142→  1142→                    <div className={`text-xs ${activeSection === item.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+  1143→  1143→  1143→                      {item.desc}
+  1144→  1144→  1144→                    </div>
+  1145→  1145→  1145→                  </div>
+  1146→  1146→  1146→                  {activeSection === item.id && <ChevronRight className="h-4 w-4 shrink-0 text-emerald-500" />}
+  1147→  1147→  1147→                  {item.badge && activeSection !== item.id && (
+  1148→  1148→  1148→                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+  1149→  1149→  1149→                      {item.badge}
+  1150→  1150→  1150→                    </span>
+  1151→  1151→  1151→                  )}
+  1152→  1152→  1152→                </motion.button>
+  1153→  1153→  1153→              ))}
+  1154→  1154→  1154→            </nav>
+  1155→  1155→  1155→
+  1156→  1156→  1156→            {/* Stats */}
+  1157→  1157→  1157→            <div className="px-4 pb-2">
+  1158→  1158→  1158→              <div className="p-3 rounded-xl bg-muted/20 border border-border/20">
+  1159→  1159→  1159→                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+  1160→  1160→  1160→                  <Cpu className="h-3 w-3" /> Arena Stats
+  1161→  1161→  1161→                </div>
+  1162→  1162→  1162→                <div className="grid grid-cols-2 gap-2">
+  1163→  1163→  1163→                  <div className="text-center">
+  1164→  1164→  1164→                    <div className="text-sm font-bold text-emerald-500">99.9%</div>
+  1165→  1165→  1165→                    <div className="text-[10px] text-muted-foreground">Uptime</div>
+  1166→  1166→  1166→                  </div>
+  1167→  1167→  1167→                  <div className="text-center">
+  1168→  1168→  1168→                    <div className="text-sm font-bold text-emerald-500">&lt;2s</div>
+  1169→  1169→  1169→                    <div className="text-[10px] text-muted-foreground">Response</div>
+  1170→  1170→  1170→                  </div>
+  1171→  1171→  1171→                </div>
+  1172→  1172→  1172→              </div>
+  1173→  1173→  1173→            </div>
+  1174→  1174→  1174→
+  1175→  1175→  1175→            {/* Bottom */}
+  1176→  1176→  1176→            <div className="p-3 border-t border-border/20">
+  1177→  1177→  1177→              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+  1178→  1178→  1178→                onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/30 transition-all text-sm">
+  1179→  1179→  1179→                <motion.div key={isDark ? 'dark' : 'light'} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+  1180→  1180→  1180→                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}>
+  1181→  1181→  1181→                  {isDark ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-500" />}
+  1182→  1182→  1182→                </motion.div>
+  1183→  1183→  1183→                {isDark ? 'Light Mode' : 'Dark Mode'}
+  1184→  1184→  1184→              </motion.button>
+  1185→  1185→  1185→            </div>
+  1186→  1186→  1186→          </div>
+  1187→  1187→  1187→        )}
+  1188→  1188→  1188→      </motion.aside>
+  1189→  1189→  1189→
+  1190→  1190→  1190→      {/* Main Content */}
+  1191→  1191→  1191→      <main className="flex-1 flex flex-col min-w-0">
+  1192→  1192→  1192→        {/* Top Bar */}
+  1193→  1193→  1193→        <header className="h-14 border-b border-border/30 flex items-center justify-between px-4 shrink-0 bg-background/80 backdrop-blur-lg">
+  1194→  1194→  1194→          <div className="flex items-center gap-3">
+  1195→  1195→  1195→            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+  1196→  1196→  1196→              onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-muted/50 transition-colors">
+  1197→  1197→  1197→              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+  1198→  1198→  1198→            </motion.button>
+  1199→  1199→  1199→            <div className="flex items-center gap-2">
+  1200→  1200→  1200→              {navItems.map((item) =>
+  1201→  1201→  1201→                activeSection === item.id ? (
+  1202→  1202→  1202→                  <motion.div key={item.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+  1203→  1203→  1203→                    className="flex items-center gap-2">
+  1204→  1204→  1204→                    <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+  1205→  1205→  1205→                      <item.icon className="h-3.5 w-3.5 text-white" />
+  1206→  1206→  1206→                    </div>
+  1207→  1207→  1207→                    <span className="font-semibold text-sm">{item.label}</span>
+  1208→  1208→  1208→                  </motion.div>
+  1209→  1209→  1209→                ) : null
+  1210→  1210→  1210→              )}
+  1211→  1211→  1211→            </div>
+  1212→  1212→  1212→          </div>
+  1213→  1213→  1213→          <div className="flex items-center gap-3">
+  1214→  1214→  1214→            <motion.div animate={glowPulse.animate} transition={glowPulse.transition}
+  1215→  1215→  1215→              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-medium border border-emerald-500/20">
+  1216→  1216→  1216→              <motion.div className="w-1.5 h-1.5 rounded-full bg-emerald-500"
+  1217→  1217→  1217→                animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
+  1218→  1218→  1218→              Online
+  1219→  1219→  1219→            </motion.div>
+  1220→  1220→  1220→            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/30 text-[10px] text-muted-foreground border border-border/20">
+  1221→  1221→  1221→              <Shield className="h-3 w-3" /> Secure
+  1222→  1222→  1222→            </div>
+  1223→  1223→  1223→          </div>
+  1224→  1224→  1224→        </header>
+  1225→  1225→  1225→
+  1226→  1226→  1226→        {/* Content */}
+  1227→  1227→  1227→        <div className="flex-1 min-h-0 relative">
+  1228→  1228→  1228→          <div className={`h-full ${activeSection === 'arena' ? '' : 'hidden'}`}>
+  1229→  1229→  1229→            <ArenaHomeSection onNavigate={setActiveSection} />
+  1230→  1230→  1230→          </div>
+  1231→  1231→  1231→          <div className={`h-full ${activeSection === 'chat' ? '' : 'hidden'}`}>
+  1232→  1232→  1232→            <ChatSection />
+  1233→  1233→  1233→          </div>
+  1234→  1234→  1234→          <div className={`h-full ${activeSection === 'website' ? '' : 'hidden'}`}>
+  1235→  1235→  1235→            <WebsiteCreatorSection />
+  1236→  1236→  1236→          </div>
+  1237→  1237→  1237→        </div>
+  1238→  1238→  1238→      </main>
+  1239→  1239→  1239→    </div>
+  1240→  1240→  1240→  );
+  1241→  1241→  1241→}
+  1242→  1242→  1242→
